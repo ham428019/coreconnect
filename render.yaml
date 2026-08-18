@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: coreconnect-api
+    env: node
+    buildCommand: cd server && npm install && npx prisma generate && npm run build
+    startCommand: cd server && npx prisma db push && npx prisma db seed && npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: coreconnect-db
+          property: connectionString
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        value: https://coreconnect.vercel.app
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: coreconnect-db
+    plan: free

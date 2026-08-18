@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#0F172A"/>
+  <rect x="25" y="25" width="550" height="550" rx="20" fill="none" stroke="#3B82F6" stroke-width="3" opacity="0.5"/>
+  <circle cx="300" cy="250" r="80" fill="none" stroke="#3B82F6" stroke-width="4"/>
+  <text x="300" y="270" text-anchor="middle" font-family="Arial, sans-serif" font-size="60" fill="#3B82F6">CC</text>
+  <text x="300" y="390" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#64748B">CORECONNECT</text>
+  <text x="300" y="420" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#64748B">Product Image</text>
+</svg>

@@ -1,0 +1,140 @@
+import type { Product, Category } from '../types';
+
+export const fallbackCategories: Category[] = [
+  { id: 'comp', name: 'Computer Components', slug: 'computer-components', sortOrder: 0, isActive: true },
+  { id: 'peri', name: 'Peripherals', slug: 'peripherals', sortOrder: 1, isActive: true },
+  { id: 'mobi', name: 'Mobile Accessories', slug: 'mobile-accessories', sortOrder: 2, isActive: true },
+  { id: 'audi', name: 'Audio', slug: 'audio', sortOrder: 3, isActive: true },
+  { id: 'stor', name: 'Storage', slug: 'storage', sortOrder: 4, isActive: true },
+  { id: 'netw', name: 'Networking', slug: 'networking', sortOrder: 5, isActive: true },
+  { id: 'secu', name: 'Security & Surveillance', slug: 'security-surveillance', sortOrder: 6, isActive: true },
+  { id: 'came', name: 'Cameras & Photography', slug: 'cameras-photography', sortOrder: 7, isActive: true },
+  { id: 'gami', name: 'Gaming', slug: 'gaming', sortOrder: 8, isActive: true },
+  { id: 'smrt', name: 'Smart Home', slug: 'smart-home', sortOrder: 9, isActive: true },
+  { id: 'lapt', name: 'Laptop Accessories', slug: 'laptop-accessories', sortOrder: 10, isActive: true },
+  { id: 'offi', name: 'Office Electronics', slug: 'office-electronics', sortOrder: 11, isActive: true },
+  { id: 'cabl', name: 'Cables & Adapters', slug: 'cables-adapters', sortOrder: 12, isActive: true },
+  { id: 'powe', name: 'Power Solutions', slug: 'power-solutions', sortOrder: 13, isActive: true },
+  { id: 'wear', name: 'Wearables', slug: 'wearables', sortOrder: 14, isActive: true },
+  { id: 'soft', name: 'Software & Digital', slug: 'software-digital', sortOrder: 15, isActive: true },
+  { id: 'diy', name: 'DIY Electronics', slug: 'diy-electronics', sortOrder: 16, isActive: true },
+  { id: 'tool', name: 'Tools & Maintenance', slug: 'tools-maintenance', sortOrder: 17, isActive: true },
+];
+
+interface RawProduct {
+  name: string; category: string; brand: string; price: number; comparePrice?: number; stock: number;
+  shortDesc: string; tags: string[]; isFeatured?: boolean; isDigital?: boolean;
+}
+
+const rawProducts: RawProduct[] = [
+  { name: 'Intel Core i9-14900K', category: 'computer-components', brand: 'Intel', price: 589.99, stock: 45, shortDesc: '24 cores, up to 6.0 GHz, 36MB cache, unlocked', tags: ['cpu', 'intel', 'i9'], isFeatured: true },
+  { name: 'AMD Ryzen 9 7950X3D', category: 'computer-components', brand: 'AMD', price: 549.99, stock: 32, shortDesc: '16 cores, 3D V-Cache, 128MB total cache', tags: ['cpu', 'amd'], isFeatured: true },
+  { name: 'Intel Core i5-14600K', category: 'computer-components', brand: 'Intel', price: 319.99, stock: 78, shortDesc: '14 cores, up to 5.3 GHz, 24MB cache', tags: ['cpu', 'intel', 'i5'] },
+  { name: 'NVIDIA GeForce RTX 4090 FE', category: 'computer-components', brand: 'NVIDIA', price: 1599.99, comparePrice: 1699.99, stock: 12, shortDesc: '24GB GDDR6X, 16,384 CUDA cores, DLSS 3', tags: ['gpu', 'nvidia'], isFeatured: true },
+  { name: 'ASUS ROG Strix RTX 4080 OC', category: 'computer-components', brand: 'ASUS', price: 1199.99, stock: 23, shortDesc: '16GB GDDR6X, 2625 MHz OC, vapor chamber', tags: ['gpu', 'asus'] },
+  { name: 'MSI Gaming X Trio RTX 4070 Ti', category: 'computer-components', brand: 'MSI', price: 799.99, stock: 34, shortDesc: '12GB GDDR6X, TRI FROZR 3 cooling', tags: ['gpu', 'msi'] },
+  { name: 'ASUS ROG Maximus Z790 Hero', category: 'computer-components', brand: 'ASUS', price: 629.99, stock: 18, shortDesc: '20+1 power stages, DDR5-7800+, Wi-Fi 6E', tags: ['motherboard', 'asus'] },
+  { name: 'Gigabyte Z790 AORUS Elite AX', category: 'computer-components', brand: 'Gigabyte', price: 259.99, stock: 45, shortDesc: '16+1+2 VRM, DDR5-7600, Wi-Fi 6E', tags: ['motherboard', 'gigabyte'] },
+  { name: 'Corsair Vengeance RGB 32GB DDR5 6000MHz', category: 'computer-components', brand: 'Corsair', price: 129.99, stock: 120, shortDesc: '32GB (2x16GB) DDR5 6000MHz, CL36, RGB', tags: ['ram', 'ddr5'] },
+  { name: 'Kingston Fury Beast 32GB DDR5 5600MHz', category: 'computer-components', brand: 'Kingston', price: 99.99, stock: 156, shortDesc: '32GB (2x16GB) DDR5 5600MHz, plug-and-play', tags: ['ram', 'ddr5'] },
+  { name: 'Crucial Pro 64GB DDR5 5600MHz', category: 'computer-components', brand: 'Crucial', price: 189.99, stock: 67, shortDesc: '64GB (2x32GB) DDR5 5600MHz, professional', tags: ['ram', 'ddr5'] },
+  { name: 'Samsung 990 Pro 2TB NVMe SSD', category: 'computer-components', brand: 'Samsung', price: 169.99, comparePrice: 229.99, stock: 89, shortDesc: '2TB NVMe, 7,450 MB/s read, PCIe 4.0', tags: ['ssd', 'nvme'], isFeatured: true },
+  { name: 'WD Black SN850X 2TB NVMe SSD', category: 'computer-components', brand: 'WD', price: 149.99, stock: 112, shortDesc: '2TB NVMe, 7,300 MB/s, Game Mode 2.0', tags: ['ssd', 'nvme'] },
+  { name: 'Corsair RM1000x Shift 1000W PSU', category: 'computer-components', brand: 'Corsair', price: 189.99, stock: 45, shortDesc: '1000W, 80+ Gold, ATX 3.0, modular', tags: ['psu'] },
+  { name: 'NZXT Kraken Elite 360 RGB', category: 'computer-components', brand: 'NZXT', price: 289.99, stock: 34, shortDesc: '360mm AIO, 2.36" LCD display, RGB', tags: ['cooler'] },
+  { name: 'Noctua NH-D15 chromax.black', category: 'computer-components', brand: 'Noctua', price: 109.99, stock: 56, shortDesc: 'Dual 140mm fans, 6 heatpipes, near-silent', tags: ['cooler'] },
+  { name: 'Corsair 4000D Airflow', category: 'computer-components', brand: 'Corsair', price: 94.99, stock: 89, shortDesc: 'High airflow, 360mm radiator, tempered glass', tags: ['case'] },
+  { name: 'Thermal Grizzly Kryonaut 1g', category: 'computer-components', brand: 'Thermal Grizzly', price: 9.99, stock: 300, shortDesc: '12.5 W/mK thermal paste for overclockers', tags: ['thermal-paste'] },
+  { name: 'Logitech G Pro X Superlight 2', category: 'peripherals', brand: 'Logitech', price: 159.99, stock: 73, shortDesc: '<60g, 32K DPI, 95hr battery, wireless', tags: ['mouse'], isFeatured: true },
+  { name: 'Razer DeathAdder V3 Pro', category: 'peripherals', brand: 'Razer', price: 149.99, stock: 61, shortDesc: '63g, 30K DPI, 90hr battery, ergonomic', tags: ['mouse'] },
+  { name: 'Logitech MX Master 3S', category: 'peripherals', brand: 'Logitech', price: 99.99, comparePrice: 119.99, stock: 120, shortDesc: '8K DPI, MagSpeed wheel, quiet clicks', tags: ['mouse', 'productivity'], isFeatured: true },
+  { name: 'Razer BlackWidow V4 Pro', category: 'peripherals', brand: 'Razer', price: 229.99, comparePrice: 249.99, stock: 45, shortDesc: 'Yellow linear switches, command dial, Chroma', tags: ['keyboard'], isFeatured: true },
+  { name: 'Logitech G Pro X TKL Keyboard', category: 'peripherals', brand: 'Logitech', price: 149.99, stock: 67, shortDesc: 'TKL, GX Blue Clicky, LIGHTSYNC RGB', tags: ['keyboard'] },
+  { name: 'Keychron Q1 Pro', category: 'peripherals', brand: 'Keychron', price: 199.99, stock: 38, shortDesc: '75% aluminum, wireless, hot-swap, QMK/VIA', tags: ['keyboard'] },
+  { name: 'ASUS ROG Swift PG27AQDM 27" OLED', category: 'peripherals', brand: 'ASUS', price: 999.99, stock: 15, shortDesc: '27" 1440p OLED, 240Hz, 0.03ms', tags: ['monitor'] },
+  { name: 'Samsung Odyssey G9 49"', category: 'peripherals', brand: 'Samsung', price: 1299.99, stock: 9, shortDesc: '49" DQHD super ultrawide, 240Hz, Mini-LED', tags: ['monitor'] },
+  { name: 'MSI Optix MAG274QRF-QD 27"', category: 'peripherals', brand: 'MSI', price: 399.99, stock: 34, shortDesc: '27" Quantum Dot IPS, 165Hz, 1ms', tags: ['monitor'] },
+  { name: 'Razer BlackShark V2 Pro Wireless', category: 'peripherals', brand: 'Razer', price: 179.99, stock: 62, shortDesc: '50mm drivers, HyperClear mic, 70hr battery', tags: ['headset'] },
+  { name: 'HyperX Cloud Alpha Wireless', category: 'peripherals', brand: 'HyperX', price: 199.99, stock: 38, shortDesc: '300hr battery, dual chamber drivers', tags: ['headset'] },
+  { name: 'SteelSeries Arctis Nova Pro Wireless', category: 'peripherals', brand: 'SteelSeries', price: 349.99, stock: 21, shortDesc: 'ANC, hot-swap batteries, Sonar EQ', tags: ['headset'] },
+  { name: 'JBL Flip 6 Portable', category: 'peripherals', brand: 'JBL', price: 129.99, comparePrice: 149.99, stock: 89, shortDesc: 'IP67 waterproof, 12hr battery, PartyBoost', tags: ['speaker'], isFeatured: true },
+  { name: 'Anker 737 Charger 120W GaNPrime', category: 'mobile-accessories', brand: 'Anker', price: 59.99, stock: 200, shortDesc: '120W GaN, 2C1A, 53% smaller than Apple', tags: ['charger'] },
+  { name: 'Samsung 45W Super Fast Charger', category: 'mobile-accessories', brand: 'Samsung', price: 39.99, stock: 145, shortDesc: '45W USB-C PD PPS for Galaxy S24', tags: ['charger'] },
+  { name: 'Anker 737 Power Bank 24K', category: 'mobile-accessories', brand: 'Anker', price: 109.99, comparePrice: 129.99, stock: 89, shortDesc: '24,000mAh, 140W output, smart TFT display', tags: ['power-bank'], isFeatured: true },
+  { name: 'Xiaomi 20000mAh 50W Power Bank', category: 'mobile-accessories', brand: 'Xiaomi', price: 39.99, stock: 156, shortDesc: '20000mAh, 50W fast charge, aluminum body', tags: ['power-bank'] },
+  { name: 'UGREEN USB-C 100W 2m Cable', category: 'mobile-accessories', brand: 'UGREEN', price: 12.99, stock: 400, shortDesc: '2m braided nylon, 100W PD, 480Mbps', tags: ['cable'] },
+  { name: 'Spigen Tough Armor iPhone 15 Pro Max', category: 'mobile-accessories', brand: 'Spigen', price: 16.99, stock: 300, shortDesc: 'Military-grade, Air Cushion, MagSafe', tags: ['case'] },
+  { name: 'Apple AirPods Pro (2nd Gen) USB-C', category: 'audio', brand: 'Apple', price: 249.99, stock: 120, shortDesc: 'H2 chip, Adaptive Audio, 30hr, USB-C', tags: ['earbuds'], isFeatured: true },
+  { name: 'Sony WF-1000XM5', category: 'audio', brand: 'Sony', price: 299.99, stock: 67, shortDesc: 'V2 chip, QN2e ANC, LDAC, 8hr battery', tags: ['earbuds'] },
+  { name: 'Samsung Galaxy Buds3 Pro', category: 'audio', brand: 'Samsung', price: 229.99, stock: 94, shortDesc: 'Blade design, adaptive ANC, 24-bit hi-fi', tags: ['earbuds'] },
+  { name: 'Sony WH-1000XM5', category: 'audio', brand: 'Sony', price: 379.99, comparePrice: 399.99, stock: 56, shortDesc: '8-mic ANC, 30hr battery, speak-to-chat', tags: ['headphones'], isFeatured: true },
+  { name: 'Bose QuietComfort Ultra', category: 'audio', brand: 'Bose', price: 429.99, stock: 38, shortDesc: 'CustomTune ANC, Immersive Audio, premium', tags: ['headphones'] },
+  { name: 'JBL Tour One M2', category: 'audio', brand: 'JBL', price: 249.99, stock: 43, shortDesc: 'Adaptive ANC, Personi-Fi 2.0 spatial audio', tags: ['headphones'] },
+  { name: 'JBL Charge 5', category: 'audio', brand: 'JBL', price: 179.99, stock: 78, shortDesc: 'IP67, 20hr battery, built-in power bank', tags: ['speaker'] },
+  { name: 'Samsung T9 Portable SSD 2TB', category: 'storage', brand: 'Samsung', price: 219.99, stock: 67, shortDesc: '2TB, 2,000 MB/s, USB 3.2 Gen 2x2', tags: ['ssd'] },
+  { name: 'SanDisk Extreme Portable SSD V2 2TB', category: 'storage', brand: 'SanDisk', price: 179.99, stock: 89, shortDesc: '2TB, 1,050MB/s, IP55, 256-bit AES', tags: ['ssd'] },
+  { name: 'SanDisk Ultra Dual Drive Luxe 256GB', category: 'storage', brand: 'SanDisk', price: 29.99, stock: 200, shortDesc: '256GB, USB-C + USB-A, 150MB/s, metal', tags: ['usb'] },
+  { name: 'ASUS RT-AX86U Pro AX5700', category: 'networking', brand: 'ASUS', price: 249.99, stock: 45, shortDesc: 'AX5700 Wi-Fi 6, 2.5G WAN, gaming', tags: ['router'] },
+  { name: 'TP-Link Archer AXE75 AXE5400', category: 'networking', brand: 'TP-Link', price: 199.99, stock: 73, shortDesc: 'AXE5400 Wi-Fi 6E, tri-band, 6GHz', tags: ['router'] },
+  { name: 'Hikvision 4K ColorVu Camera', category: 'security-surveillance', brand: 'Hikvision', price: 149.99, stock: 56, shortDesc: '4K 24/7 color, AcuSense 2.0, IP67', tags: ['cctv'] },
+  { name: 'Ring Video Doorbell Pro 2', category: 'security-surveillance', brand: 'Ring', price: 259.99, stock: 43, shortDesc: '1536p HD+, 3D Motion, Bird\'s Eye View', tags: ['doorbell'] },
+  { name: 'Sony Alpha 7 IV', category: 'cameras-photography', brand: 'Sony', price: 2499.99, stock: 12, shortDesc: '33MP full-frame, Real-time Eye AF, 4K 60p', tags: ['camera'] },
+  { name: 'Canon EOS R6 Mark II', category: 'cameras-photography', brand: 'Canon', price: 2499.99, stock: 18, shortDesc: '24.2MP, 40fps, 6K oversampled 4K', tags: ['camera'] },
+  { name: 'GoPro HERO12 Black', category: 'cameras-photography', brand: 'GoPro', price: 399.99, stock: 89, shortDesc: '5.3K60 HDR, HyperSmooth 6.0, 177° FOV', tags: ['camera'] },
+  { name: 'DJI Osmo Action 4', category: 'cameras-photography', brand: 'DJI', price: 349.99, stock: 67, shortDesc: '1/1.3" sensor, 4K120, 18m waterproof', tags: ['camera'] },
+  { name: 'Secretlab TITAN Evo 2022', category: 'gaming', brand: 'Secretlab', price: 549.99, stock: 23, shortDesc: 'Cold-cure foam, 4-way lumbar, 5-year warranty', tags: ['chair'] },
+  { name: 'Xbox Wireless Controller', category: 'gaming', brand: 'Microsoft', price: 59.99, stock: 200, shortDesc: 'Wireless, textured grip, Share button', tags: ['controller'] },
+  { name: 'PlayStation DualSense Edge', category: 'gaming', brand: 'Sony', price: 199.99, stock: 89, shortDesc: 'Replaceable sticks, back buttons, trigger stops', tags: ['controller'] },
+  { name: 'Philips Hue Color Ambiance Starter Kit', category: 'smart-home', brand: 'Philips', price: 199.99, stock: 67, shortDesc: '4 bulbs + Bridge, 16M colors, voice control', tags: ['smart-bulb'] },
+  { name: 'Peak Design Everyday Backpack V2 30L', category: 'laptop-accessories', brand: 'Peak Design', price: 289.99, stock: 34, shortDesc: '30L, weatherproof, 16" laptop, FlexFold', tags: ['backpack'] },
+  { name: 'Anker 575 USB-C Docking Station 13-in-1', category: 'laptop-accessories', brand: 'Anker', price: 249.99, stock: 45, shortDesc: '13-in-1, dual 4K HDMI, 100W PD', tags: ['dock'] },
+  { name: 'Brother HL-L2350DW Laser Printer', category: 'office-electronics', brand: 'Brother', price: 149.99, stock: 56, shortDesc: '32ppm, auto duplex, Wi-Fi Direct', tags: ['printer'] },
+  { name: 'BenQ TK700STi 4K Projector', category: 'office-electronics', brand: 'BenQ', price: 1499.99, stock: 12, shortDesc: '4K HDR, 3000 lumens, 4ms, Android TV', tags: ['projector'] },
+  { name: 'UGREEN HDMI 2.1 Cable 8K 6ft', category: 'cables-adapters', brand: 'UGREEN', price: 14.99, stock: 300, shortDesc: '8K@60Hz, 48Gbps, certified HDMI 2.1', tags: ['cable'] },
+  { name: 'APC Back-UPS Pro BR1500G', category: 'power-solutions', brand: 'APC', price: 219.99, stock: 34, shortDesc: '1500VA/865W, 10 outlets, AVR, LCD', tags: ['ups'] },
+  { name: 'Apple Watch Series 9 45mm', category: 'wearables', brand: 'Apple', price: 429.99, stock: 112, shortDesc: 'S9 chip, Double Tap, 2000 nits, ECG', tags: ['smartwatch'] },
+  { name: 'Samsung Galaxy Watch6 Classic 47mm', category: 'wearables', brand: 'Samsung', price: 399.99, stock: 78, shortDesc: 'Rotating bezel, Wear OS 4, body composition', tags: ['smartwatch'] },
+  { name: 'Garmin fenix 7 Pro Solar', category: 'wearables', brand: 'Garmin', price: 799.99, stock: 34, shortDesc: 'Solar 37-day, multi-band GPS, sapphire', tags: ['smartwatch'] },
+  { name: 'Meta Quest 3 512GB', category: 'wearables', brand: 'Meta', price: 649.99, stock: 45, shortDesc: '4K+ display, XR2 Gen 2, pancake lenses', tags: ['vr'] },
+  { name: 'PlayStation VR2', category: 'wearables', brand: 'Sony', price: 549.99, stock: 67, shortDesc: '4K HDR OLED, 110° FOV, eye tracking', tags: ['vr'] },
+  { name: 'Windows 11 Pro Retail License', category: 'software-digital', brand: 'Microsoft', price: 199.99, stock: 500, shortDesc: 'Genuine retail, transferable, lifetime', tags: ['software'], isDigital: true },
+  { name: 'Microsoft 365 Personal (1-Year)', category: 'software-digital', brand: 'Microsoft', price: 69.99, stock: 500, shortDesc: '1yr, 5 devices, 1TB OneDrive', tags: ['software'], isDigital: true },
+  { name: 'Norton 360 Deluxe (1-Year, 5 Devices)', category: 'software-digital', brand: 'Norton', price: 49.99, stock: 500, shortDesc: '1yr, 5 devices, VPN, dark web monitor', tags: ['software'], isDigital: true },
+  { name: 'Arduino Uno R4 WiFi', category: 'diy-electronics', brand: 'Arduino', price: 27.99, stock: 89, shortDesc: 'ARM Cortex-M4, Wi-Fi/BT, LED matrix', tags: ['arduino'] },
+  { name: 'Raspberry Pi 5 8GB', category: 'diy-electronics', brand: 'Raspberry Pi', price: 79.99, stock: 34, shortDesc: 'Cortex-A76, 8GB RAM, dual 4K HDMI', tags: ['raspberry-pi'] },
+  { name: 'ELEGOO UNO R3 Starter Kit', category: 'diy-electronics', brand: 'ELEGOO', price: 39.99, stock: 150, shortDesc: '200+ components, sensors, tutorials', tags: ['kit'] },
+  { name: 'iFixit Manta Driver Kit 112 Bit', category: 'tools-maintenance', brand: 'iFixit', price: 59.99, stock: 67, shortDesc: '112 bits, aluminum handle, lifetime warranty', tags: ['toolkit'] },
+  { name: 'ORIA Precision Screwdriver Set 86-in-1', category: 'tools-maintenance', brand: 'ORIA', price: 19.99, stock: 200, shortDesc: '86-in-1, 56 bits, magnetic driver', tags: ['toolkit'] },
+];
+
+export function getFallbackProducts(category?: string, search?: string): Product[] {
+  const placeholderImg = 'https://placehold.co/600x600/0F172A/3B82F6?text=CoreConnect';
+
+  let filtered = rawProducts;
+  if (category) filtered = filtered.filter(p => p.category === category);
+  if (search) filtered = filtered.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
+
+  return filtered.map((p, idx) => ({
+    id: `fb-${idx}`,
+    name: p.name,
+    slug: p.name.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-'),
+    sku: `CC-FB-${idx.toString().padStart(3, '0')}`,
+    description: p.shortDesc,
+    shortDescription: p.shortDesc,
+    price: p.price,
+    comparePrice: p.comparePrice,
+    stockQty: p.stock,
+    lowStockThreshold: 10,
+    isActive: true,
+    isFeatured: p.isFeatured || false,
+    isDigital: p.isDigital || false,
+    tags: p.tags,
+    category: { id: p.category, name: p.category, slug: p.category, sortOrder: 0, isActive: true },
+    brand: p.brand ? { id: `b-${p.brand}`, name: p.brand, slug: p.brand.toLowerCase() } : undefined,
+    images: [{ id: `img-${idx}`, url: placeholderImg, altText: p.name, isPrimary: true, sortOrder: 0 }],
+  }));
+}
+
+export function getFallbackCategories(): Category[] {
+  return fallbackCategories;
+}
