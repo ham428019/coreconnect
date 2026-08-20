@@ -8,6 +8,7 @@ import PageHeader from '../../components/layout/PageHeader';
 
 export default function AdminCategories() {
   const [showForm, setShowForm] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [form, setForm] = useState({ name: '', description: '' });
   const queryClient = useQueryClient();
 
@@ -19,6 +20,12 @@ export default function AdminCategories() {
   const createCategory = useMutation({
     mutationFn: () => api.post('/categories', form),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin', 'categories'] }); setShowForm(false); toast.success('Category created'); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const updateCategory = useMutation({
+    mutationFn: () => api.patch(`/categories/${editingCategory?.id}`, form),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin', 'categories'] }); setShowForm(false); setEditingCategory(null); toast.success('Category updated'); },
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -35,18 +42,19 @@ export default function AdminCategories() {
         title={`Categories (${categories.length})`}
         subtitle="Organize the store catalog"
         actions={
-          <button onClick={() => setShowForm(!showForm)} className="btn-primary text-sm">
+          <button onClick={() => { setEditingCategory(null); setShowForm(!showForm); }} className="btn-primary text-sm">
             <Plus size={16} /> Add Category
           </button>
         }
       />
 
       {showForm && (
-        <div className="card mb-6 flex gap-3">
+        <div className="card mb-6 flex gap-3 items-center">
+          <p className="font-semibold whitespace-nowrap">{editingCategory ? 'Edit' : 'New'}</p>
           <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Category name" className="input !py-2 flex-1" />
           <input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Description (optional)" className="input !py-2 flex-1" />
-          <button onClick={() => createCategory.mutate()} className="btn-primary text-sm">Create</button>
-          <button onClick={() => setShowForm(false)} className="btn-ghost text-sm">Cancel</button>
+          <button onClick={() => editingCategory ? updateCategory.mutate() : createCategory.mutate()} className="btn-primary text-sm">{editingCategory ? 'Update' : 'Create'}</button>
+          <button onClick={() => { setShowForm(false); setEditingCategory(null); }} className="btn-ghost text-sm">Cancel</button>
         </div>
       )}
 
@@ -61,7 +69,7 @@ export default function AdminCategories() {
                 <p className="text-xs text-text-muted">{cat.slug}</p>
               </div>
               <div className="flex gap-1">
-                <button className="p-1.5 hover:bg-gray-100 rounded"><Edit size={14} /></button>
+                <button onClick={() => { setEditingCategory(cat); setForm({ name: cat.name, description: cat.description || '' }); setShowForm(true); }} className="p-1.5 hover:bg-gray-100 rounded"><Edit size={14} /></button>
                 <button onClick={() => deleteCategory.mutate(cat.id)} className="p-1.5 hover:bg-red-50 rounded text-danger"><Trash2 size={14} /></button>
               </div>
             </div>

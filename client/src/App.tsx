@@ -16,7 +16,9 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
 import OrderHistory from './pages/OrderHistory';
+import OrderTracking from './pages/OrderTracking';
 import Login from './pages/Login';
+import About from './pages/About';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Wishlist from './pages/Wishlist';
@@ -147,6 +149,18 @@ export default function App() {
               </div>
             </ProtectedRoute>
           } />
+          <Route path="/track/:id" element={
+            <ProtectedRoute>
+              <div className="flex flex-col min-h-screen">
+                <Navbar />
+                <main className="flex-1 max-w-4xl mx-auto px-4 py-8 w-full">
+                  <OrderTracking />
+                </main>
+                <Footer />
+                <AIWidget />
+              </div>
+            </ProtectedRoute>
+          } />
           <Route path="/orders" element={
             <ProtectedRoute>
               <div className="flex flex-col min-h-screen">
@@ -158,6 +172,16 @@ export default function App() {
                 <AIWidget />
               </div>
             </ProtectedRoute>
+          } />
+          <Route path="/about" element={
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-1 max-w-4xl mx-auto px-4 py-8 w-full">
+                <About />
+              </main>
+              <Footer />
+              <AIWidget />
+            </div>
           } />
           <Route path="/login" element={
             <div className="flex flex-col min-h-screen">
@@ -239,7 +263,7 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-      <Toaster position="top-right" richColors />
+      <Toaster position="top-right" richColors duration={1500} />
     </QueryClientProvider>
   );
 }

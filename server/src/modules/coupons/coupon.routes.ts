@@ -2,13 +2,13 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/database';
 import { requireAuth, requireRole } from '../../middleware/requireAuth';
 import { apiResponse, apiError } from '../../utils/helpers';
-import { UserRole } from '@prisma/client';
+import { UserRole, DiscountType } from '@prisma/client';
 
 const router = Router();
 
 router.get('/validate', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const code = req.query.code as string;
+    const code = String(req.query.code || '').trim().toUpperCase();
     if (!code) return apiError(res, 400, 'Coupon code required');
 
     const coupon = await prisma.coupon.findUnique({ where: { code } });
@@ -42,20 +42,43 @@ router.get('/', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), asyn
 router.post('/', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { code, discountType, discountValue, minOrderAmount, usageLimit } = req.body;
+
+    const cleanCode = typeof code === 'string' ? code.trim().toUpperCase() : '';
+    if (!cleanCode) return apiError(res, 400, 'Coupon code is required');
+
+    const cleanType = String(discountType || '').toUpperCase();
+    if (!['PERCENTAGE', 'FIXED_AMOUNT', 'FREE_SHIPPING'].includes(cleanType)) {
+      return apiError(res, 400, 'Invalid discount type');
+    }
+
+    const value = Number(discountValue);
+    if (!Number.isFinite(value) || value <= 0) return apiError(res, 400, 'A valid discount value is required');
+
+    const cleanMin = minOrderAmount === '' || minOrderAmount === null || minOrderAmount === undefined
+      ? null
+      : Number(minOrderAmount);
+    if (cleanMin !== null && (!Number.isFinite(cleanMin) || cleanMin < 0)) return apiError(res, 400, 'Invalid minimum order amount');
+
+    const cleanLimit = usageLimit === '' || usageLimit === null || usageLimit === undefined
+      ? null
+      : Number(usageLimit);
+    if (cleanLimit !== null && (!Number.isInteger(cleanLimit) || cleanLimit < 0)) return apiError(res, 400, 'Invalid usage limit');
+
     const coupon = await prisma.coupon.create({
       data: {
-        code,
-        discountType,
-        discountValue,
-        minOrderAmount,
-        usageLimit,
+        code: cleanCode,
+        discountType: cleanType as DiscountType,
+        discountValue: value,
+        minOrderAmount: cleanMin,
+        usageLimit: cleanLimit,
         startsAt: new Date(),
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         applicableCategories: [],
       },
     });
-    apiResponse(res, { coupon }, 'Coupon created');
-  } catch (error) {
+    apiResponse(res, { coupon: { ...coupon, discountValue: Number(coupon.discountValue) } }, 'Coupon created');
+  } catch (error: any) {
+    if (error?.code === 'P2002') return apiError(res, 400, `Coupon code "${req.body?.code ?? ''}" already exists`);
     next(error);
   }
 });

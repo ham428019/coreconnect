@@ -16,7 +16,7 @@ export default function AdminProducts() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'products'],
-    queryFn: () => api.get<{ products: Product[] }>('/products?limit=100'),
+    queryFn: () => api.get<{ products: Product[] }>('/products?limit=1000'),
   });
 
   const { data: catData } = useQuery({
@@ -52,13 +52,46 @@ export default function AdminProducts() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const updateProduct = useMutation({
+    mutationFn: () => api.patch(`/products/admin/${editingProduct?.id}`, {
+      name: form.name,
+      price: parseFloat(form.price),
+      stockQty: parseInt(form.stockQty),
+      description: form.description,
+      categoryId: form.categoryId,
+      tags: form.tags.split(',').map(t => t.trim()),
+    }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin', 'products'] }); setShowForm(false); setEditingProduct(null); toast.success('Product updated'); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const deleteProduct = useMutation({
+    mutationFn: (id: string) => api.delete(`/products/admin/${id}`),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin', 'products'] }); toast.success('Product deleted'); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const openEdit = (product: Product) => {
+    setEditingProduct(product);
+    setForm({
+      name: product.name,
+      price: String(product.price),
+      stockQty: String(product.stockQty),
+      description: product.description || '',
+      categoryId: product.category?.id || '',
+      tags: (product.tags || []).join(', '),
+    });
+    setImageFiles([]);
+    setShowForm(true);
+  };
+
   const products = data?.data?.products || [];
   const categories = catData?.data?.categories || [];
 
   return (
     <div>
       <PageHeader
-        title={`Products (${products.length})`}
+        title={`Products (${data?.meta?.total ?? products.length})`}
         subtitle="Manage the product catalog"
         actions={
           <button onClick={() => { setEditingProduct(null); setShowForm(!showForm); }} className="btn-primary text-sm">
@@ -69,7 +102,7 @@ export default function AdminProducts() {
 
       {showForm && (
         <div className="card mb-6">
-          <h3 className="font-semibold mb-4">New Product</h3>
+          <h3 className="font-semibold mb-4">{editingProduct ? 'Edit Product' : 'New Product'}</h3>
           <div className="space-y-3">
             <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Product Name" className="input !py-2" />
             <div className="grid grid-cols-2 gap-3">
@@ -117,10 +150,10 @@ export default function AdminProducts() {
               )}
             </div>
             <div className="flex gap-2">
-              <button onClick={() => createProduct.mutate()} disabled={createProduct.isPending || uploading} className="btn-primary text-sm">
-                {uploading ? <Loader2 size={16} className="animate-spin" /> : null} {createProduct.isPending ? 'Creating...' : 'Create Product'}
+              <button onClick={() => editingProduct ? updateProduct.mutate() : createProduct.mutate()} disabled={createProduct.isPending || updateProduct.isPending || uploading} className="btn-primary text-sm">
+                {uploading ? <Loader2 size={16} className="animate-spin" /> : null} {editingProduct ? 'Update Product' : 'Create Product'}
               </button>
-              <button onClick={() => { setShowForm(false); setImageFiles([]); }} className="btn-ghost text-sm">Cancel</button>
+              <button onClick={() => { setShowForm(false); setEditingProduct(null); setImageFiles([]); }} className="btn-ghost text-sm">Cancel</button>
             </div>
           </div>
         </div>
@@ -163,8 +196,8 @@ export default function AdminProducts() {
                   </td>
                   <td className="py-2 text-right">
                     <div className="flex justify-end gap-1">
-                      <button className="p-1 hover:bg-gray-100 rounded"><Edit size={14} /></button>
-                      <button className="p-1 hover:bg-gray-100 rounded text-danger"><Trash2 size={14} /></button>
+                      <button onClick={() => openEdit(product)} className="p-1 hover:bg-gray-100 rounded"><Edit size={14} /></button>
+                      <button onClick={() => { if (window.confirm(`Delete product "${product.name}"?`)) deleteProduct.mutate(product.id); }} className="p-1 hover:bg-gray-100 rounded text-danger"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>

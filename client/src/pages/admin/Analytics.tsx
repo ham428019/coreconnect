@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { api } from '../../lib/api';
+import { api, formatCurrencyCompact, chartTicks } from '../../lib/api';
 import PageHeader from '../../components/layout/PageHeader';
+import ChartTooltip from '../../components/charts/ChartTooltip';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -23,6 +24,8 @@ export default function AdminAnalytics() {
     month: new Date(m.month).toLocaleString('en-US', { month: 'short', year: 'numeric' }),
     revenue: Number(m.revenue),
   }));
+
+  const revenueTicks = chartTicks(monthlyRevenue.length ? Math.max(...monthlyRevenue.map((d: any) => d.revenue)) : 0);
 
   return (
     <div>
@@ -51,9 +54,9 @@ export default function AdminAnalytics() {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={monthlyRevenue}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
+                <XAxis dataKey="month" interval={0} angle={-45} textAnchor="end" height={64} />
+                <YAxis tickFormatter={(v: number) => formatCurrencyCompact(v)} domain={[0, revenueTicks.max]} ticks={revenueTicks.ticks} />
+                <Tooltip content={<ChartTooltip currency />} />
                 <Bar dataKey="revenue" fill="#3B82F6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

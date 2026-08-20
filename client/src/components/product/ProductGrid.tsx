@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { SlidersHorizontal, Grid3X3, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { SlidersHorizontal, Grid3X3, List, ChevronLeft, ChevronRight, FilterX } from 'lucide-react';
 import { api } from '../../lib/api';
 import { getFallbackProducts, getFallbackCategories } from '../../lib/fallbackData';
 import ProductCard from './ProductCard';
@@ -15,16 +15,37 @@ export default function ProductGrid({ categorySlug }: { categorySlug?: string })
   const [sort, setSort] = useState('newest');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [appliedMin, setAppliedMin] = useState('');
+  const [appliedMax, setAppliedMax] = useState('');
   const [page, setPage] = useState(1);
+
+  const commitFilters = () => {
+    setAppliedMin(minPrice.trim());
+    setAppliedMax(maxPrice.trim());
+  };
+
+  const commitOnKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') commitFilters();
+  };
+
+  const clearFilters = () => {
+    setMinPrice('');
+    setMaxPrice('');
+    setAppliedMin('');
+    setAppliedMax('');
+    setSort('newest');
+    setPage(1);
+    if (!categorySlug) setSearchParams({});
+  };
 
   useEffect(() => {
     setPage(1);
-  }, [category, sort, minPrice, maxPrice]);
+  }, [category, sort, appliedMin, appliedMax]);
 
   const queryString = new URLSearchParams({ limit: '20', sort, page: String(page) });
   if (category) queryString.set('category', category);
-  if (minPrice) queryString.set('minPrice', minPrice);
-  if (maxPrice) queryString.set('maxPrice', maxPrice);
+  if (appliedMin) queryString.set('minPrice', appliedMin);
+  if (appliedMax) queryString.set('maxPrice', appliedMax);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['products', queryString.toString()],
@@ -94,13 +115,16 @@ export default function ProductGrid({ categorySlug }: { categorySlug?: string })
             <option value="price_desc">Price: High to Low</option>
             <option value="name_asc">Name: A-Z</option>
           </select>
+          <button onClick={() => setView(view === 'grid' ? 'list' : 'grid')} className="btn-ghost !px-2" aria-label="Toggle view">
+            {view === 'grid' ? <List size={18} /> : <Grid3X3 size={18} />}
+          </button>
         </div>
         <div className="flex items-center gap-2">
-          <input type="number" placeholder="Min $" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} className="input !w-24 !py-2 text-sm" />
+          <input type="number" placeholder="Min $" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} onBlur={commitFilters} onKeyDown={commitOnKey} className="input !w-24 !py-2 text-sm" />
           <span className="text-text-muted">-</span>
-          <input type="number" placeholder="Max $" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="input !w-24 !py-2 text-sm" />
-          <button onClick={() => setView(view === 'grid' ? 'list' : 'grid')} className="btn-ghost !px-2">
-            {view === 'grid' ? <List size={18} /> : <Grid3X3 size={18} />}
+          <input type="number" placeholder="Max $" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} onBlur={commitFilters} onKeyDown={commitOnKey} className="input !w-24 !py-2 text-sm" />
+          <button onClick={clearFilters} className="btn-ghost !px-2" aria-label="Clear filters" title="Clear filters">
+            <FilterX size={18} />
           </button>
         </div>
       </div>

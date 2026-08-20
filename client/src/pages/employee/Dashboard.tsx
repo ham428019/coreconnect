@@ -8,11 +8,13 @@ import DashboardTitleBar from '../../components/layout/DashboardTitleBar';
 export default function EmployeeDashboard() {
   const { data, isLoading } = useQuery({
     queryKey: ['employee', 'orders'],
-    queryFn: () => api.get<{ orders: Order[] }>('/orders/admin/all?limit=100'),
+    queryFn: () => api.get<{ orders: Order[] }>('/orders/admin/all?limit=1000'),
   });
 
   const orders = data?.data?.orders || [];
-  const revenue = orders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+  const revenue = orders
+    .filter(o => !['CANCELLED', 'RETURNED', 'REFUNDED'].includes(o.status))
+    .reduce((sum, o) => sum + Number(o.totalAmount), 0);
   const pending = orders.filter(o => o.status === 'PENDING' || o.status === 'CONFIRMED').length;
   const shipped = orders.filter(o => o.status === 'SHIPPED').length;
   const delivered = orders.filter(o => o.status === 'DELIVERED').length;

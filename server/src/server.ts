@@ -52,6 +52,15 @@ app.get('/api/v1/health', (_req, res) => {
   res.json({ success: true, message: 'CoreConnect API is running' });
 });
 
+if (env.NODE_ENV === 'production') {
+  const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
+  app.use(express.static(clientDist));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) return next();
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
+
 app.use((_req, _res, next) => {
   next(new AppError(404, 'Route not found'));
 });

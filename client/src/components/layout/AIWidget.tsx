@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MessageCircle, X, Send, Sparkles, Smile } from 'lucide-react';
+import { useAuthStore } from '../../stores';
 
 interface ChatMessage {
   role: 'user' | 'bot';
@@ -8,6 +9,8 @@ interface ChatMessage {
   suggestions?: string[];
   features?: { title: string; description: string }[];
   categories?: string[];
+  links?: { label: string; slug: string }[];
+  stats?: { label: string; value: string }[];
   action?: { type: string; label: string; path: string };
 }
 
@@ -21,6 +24,9 @@ const defaultSuggestions = ['Website Features', 'Recommendations', 'How to Order
 
 export default function AIWidget() {
   const [open, setOpen] = useState(false);
+  const [sessionId] = useState(() => (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2));
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'bot', text: greeting(), suggestions: defaultSuggestions },
   ]);
@@ -28,6 +34,9 @@ export default function AIWidget() {
   const [loading, setLoading] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+
+  const isStaff = !!user && ['EMPLOYEE', 'MANAGER', 'ADMIN'].includes(user.role);
 
   useEffect(() => {
     setOpen(false);
@@ -42,7 +51,7 @@ export default function AIWidget() {
       const res = await fetch('/api/v1/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, sessionId }),
       });
       const data = await res.json();
       const reply = data.data;
@@ -55,6 +64,8 @@ export default function AIWidget() {
           suggestions: reply.suggestions,
           features: reply.features,
           categories: reply.categories,
+          links: reply.links,
+          stats: reply.stats,
           action: reply.action,
         },
       ]);
@@ -86,12 +97,12 @@ export default function AIWidget() {
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-96 h-[500px] bg-white rounded-modal shadow-2xl border border-border flex flex-col overflow-hidden">
+        <div className="fixed bottom-24 right-6 z-50 w-96 h-[500px] bg-white dark:bg-gray-800 rounded-modal shadow-2xl border border-border dark:border-gray-700 flex flex-col overflow-hidden">
           <div className="bg-primary text-white px-4 py-3 flex items-center gap-2">
             <Sparkles size={18} className="text-accent" />
             <div>
               <h3 className="font-semibold text-sm">Core</h3>
-              <p className="text-xs text-white/60">AI Shopping Assistant</p>
+              <p className="text-xs text-white/60">{isStaff ? `${user?.role} Assistant` : 'AI Shopping Assistant'}</p>
             </div>
           </div>
 
@@ -101,7 +112,7 @@ export default function AIWidget() {
                 <div className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm ${
                   msg.role === 'user'
                     ? 'bg-accent text-white rounded-br-sm'
-                    : 'bg-gray-100 text-text rounded-bl-sm'
+                    : 'bg-gray-100 text-text dark:bg-gray-700 dark:text-gray-100 rounded-bl-sm'
                 }`}>
                   {msg.role === 'bot' && (
                     <div className="flex items-center gap-1 mb-1">
@@ -111,10 +122,35 @@ export default function AIWidget() {
                   )}
                   <p className="whitespace-pre-wrap">{msg.text}</p>
 
+                  {msg.stats && msg.stats.length > 0 && (
+                    <div className="mt-2 grid grid-cols-2 gap-1.5">
+                      {msg.stats.map((s, idx) => (
+                        <div key={idx} className="bg-white/50 dark:bg-gray-700/60 rounded-lg p-2 text-center">
+                          <p className="text-base font-bold">{s.value}</p>
+                          <p className="text-[11px] text-text-muted dark:text-gray-400">{s.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {msg.links && msg.links.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {msg.links.map((l, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => navigate(`/product/${l.slug}`)}
+                          className="text-xs bg-accent/10 text-accent border border-accent/30 rounded-full px-3 py-1 hover:bg-accent hover:text-white transition-colors"
+                        >
+                          {l.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   {msg.features && (
                     <div className="mt-2 grid grid-cols-2 gap-1.5">
                       {msg.features.map((f, idx) => (
-                        <div key={idx} className="bg-white/50 rounded-lg p-2 text-center">
+                        <div key={idx} className="bg-white/50 dark:bg-gray-700/60 rounded-lg p-2 text-center">
                           <p className="text-xs font-semibold">{f.title}</p>
                         </div>
                       ))}
@@ -152,7 +188,7 @@ export default function AIWidget() {
                         <button
                           key={idx}
                           onClick={() => sendMessage(s)}
-                          className="text-xs bg-white border border-border rounded-full px-3 py-1 hover:bg-accent hover:text-white hover:border-accent transition-colors"
+                          className="text-xs bg-white dark:bg-gray-700 dark:text-gray-100 border border-border dark:border-gray-600 rounded-full px-3 py-1 hover:bg-accent hover:text-white hover:border-accent transition-colors"
                         >
                           {s}
                         </button>
@@ -164,7 +200,7 @@ export default function AIWidget() {
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-xl px-4 py-3 rounded-bl-sm">
+                <div className="bg-gray-100 dark:bg-gray-700 rounded-xl px-4 py-3 rounded-bl-sm">
                   <div className="flex gap-1">
                     <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
                     <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
@@ -175,13 +211,13 @@ export default function AIWidget() {
             )}
           </div>
 
-          <form onSubmit={handleSubmit} className="p-3 border-t border-border flex gap-2">
+          <form onSubmit={handleSubmit} className="p-3 border-t border-border dark:border-gray-700 flex gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Core anything..."
-              className="flex-1 px-3 py-2 border border-border rounded-btn text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+              placeholder={isStaff ? "Ask Core about store data..." : "Ask Core anything..."}
+              className="flex-1 px-3 py-2 border border-border dark:border-gray-600 rounded-btn text-sm bg-white dark:bg-gray-800 text-text dark:text-white focus:outline-none focus:ring-2 focus:ring-accent"
             />
             <button type="submit" className="btn-primary !px-3 !py-2" disabled={!input.trim()}>
               <Send size={16} />

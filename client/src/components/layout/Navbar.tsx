@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, ShoppingCart, Heart, User, Menu, X, Moon, Sun, LogOut, Package, MessageCircle } from 'lucide-react';
+import { Search, ShoppingCart, Heart, User, Menu, X, Moon, Sun, LogOut, ClipboardList, MessageCircle, LayoutDashboard } from 'lucide-react';
 import { useAuthStore, useCartStore, useUIStore } from '../../stores';
 import { api } from '../../lib/api';
 
@@ -58,6 +58,9 @@ export default function Navbar() {
 
             {isAuthenticated ? (
               <>
+                <Link to="/orders" className="hidden md:flex items-center gap-1 text-sm font-medium hover:text-accent transition-colors" title="My Orders">
+                  <ClipboardList size={18} />
+                </Link>
                 <Link to="/wishlist" className="p-2 hover:bg-bg dark:hover:bg-gray-800 rounded-btn transition-colors hidden sm:block">
                   <Heart size={20} />
                 </Link>
@@ -85,7 +88,7 @@ export default function Navbar() {
 
             {user && ['ADMIN', 'MANAGER', 'EMPLOYEE'].includes(user.role) && (
               <Link to={user.role === 'MANAGER' ? '/manager' : user.role === 'EMPLOYEE' ? '/employee' : '/admin'} className="p-2 hover:bg-bg dark:hover:bg-gray-800 rounded-btn transition-colors hidden sm:block" title="Dashboard">
-                <Package size={20} />
+                <LayoutDashboard size={20} />
               </Link>
             )}
           </div>
@@ -104,6 +107,7 @@ export default function Navbar() {
           <Link to="/category/gaming" onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-semibold uppercase tracking-wider hover:text-accent">Gaming</Link>
           <Link to="/category/audio" onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-semibold uppercase tracking-wider hover:text-accent">Audio</Link>
           <Link to="/category/mobile-accessories" onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-semibold uppercase tracking-wider hover:text-accent">Mobile</Link>
+          <Link to="/about" onClick={() => setMenuOpen(false)} className="block py-2 text-sm font-semibold uppercase tracking-wider hover:text-accent">About Us</Link>
           {!isAuthenticated && (
             <div className="pt-2 border-t border-border space-y-2">
               <Link to="/login" onClick={() => setMenuOpen(false)} className="block py-2 text-sm">Login</Link>

@@ -10,14 +10,14 @@ export default function EmployeeProducts() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['employee', 'products', search],
-    queryFn: () => api.get<{ products: Product[] }>(`/products?limit=100&search=${search}`),
+    queryFn: () => api.get<{ products: Product[] }>(`/products?limit=1000&search=${search}`),
   });
 
   const products = data?.data?.products || [];
 
   return (
     <div>
-      <PageHeader title="Product Catalog" subtitle={`${products.length} products available`} />
+      <PageHeader title="Product Catalog" subtitle={`${data?.meta?.total ?? products.length} products available`} />
 
       <div className="relative mb-4 max-w-md">
         <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />

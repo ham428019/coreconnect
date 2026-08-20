@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Package, ChevronRight } from 'lucide-react';
+import { Package, ChevronRight, Truck } from 'lucide-react';
 import { api, formatCurrency, getOrderStatusBadge } from '../lib/api';
 import type { Order } from '../types';
 
@@ -30,21 +30,26 @@ export default function OrderHistory() {
       <h1 className="font-display text-2xl font-bold mb-6">My Orders</h1>
       <div className="space-y-3">
         {orders.map((order) => (
-          <Link key={order.id} to={`/order-success/${order.id}`} className="card flex items-center gap-4 hover:border-accent transition-colors group">
+          <div key={order.id} className="card flex items-center gap-4 group">
             <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
               <Package size={24} className="text-accent" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3">
-                <p className="font-semibold">#{order.orderNumber}</p>
+                <Link to={`/track/${order.id}`} className="font-semibold hover:text-accent">#{order.orderNumber}</Link>
                 <span className={`badge ${getOrderStatusBadge(order.status)}`}>{order.status}</span>
               </div>
-              <p className="text-sm text-text-muted mt-0.5">
+              <p className="text-sm text-text-muted mt-0.5 truncate">
                 {order.items?.length || 0} items &middot; {new Date(order.createdAt).toLocaleDateString()} &middot; {formatCurrency(order.totalAmount)}
               </p>
             </div>
-            <ChevronRight size={18} className="text-text-muted group-hover:text-accent transition-colors" />
-          </Link>
+            <Link to={`/track/${order.id}`} className="btn-outline text-sm !px-3 !py-1.5 whitespace-nowrap">
+              <Truck size={14} /> Track Order
+            </Link>
+            <Link to={`/order-success/${order.id}`} className="text-text-muted hover:text-accent transition-colors" title="View receipt">
+              <ChevronRight size={18} />
+            </Link>
+          </div>
         ))}
       </div>
     </div>

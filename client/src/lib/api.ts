@@ -70,6 +70,26 @@ export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 }
 
+export function formatCurrencyCompact(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(amount);
+}
+
+export function chartTicks(dataMax: number, tickCount = 5): { ticks: number[]; max: number } {
+  if (dataMax <= 0) return { ticks: [0], max: 1 };
+  const pow = Math.pow(10, Math.floor(Math.log10(dataMax)));
+  const candidates = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];
+  const nice = candidates.find((c) => c >= dataMax / pow) || 10;
+  const max = nice * pow;
+  const step = max / tickCount;
+  const ticks = Array.from({ length: tickCount + 1 }, (_, i) => Math.round(step * i * 100) / 100);
+  return { ticks, max };
+}
+
 export function cn(...classes: (string | boolean | undefined | null)[]): string {
   return classes.filter(Boolean).join(' ');
 }

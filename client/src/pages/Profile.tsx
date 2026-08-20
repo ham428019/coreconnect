@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { User, Mail, Phone, MapPin, Plus, Trash2, Shield } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Plus, Trash2, Shield, Package, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuthStore } from '../stores';
 import type { Address } from '../types';
@@ -46,6 +47,15 @@ export default function Profile() {
   return (
     <div>
       <h1 className="font-display text-2xl font-bold mb-6">My Profile</h1>
+
+      <div className="card mb-6">
+        <h2 className="font-semibold text-lg mb-3">Account</h2>
+        <Link to="/orders" className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:border-accent transition-colors">
+          <Package size={18} className="text-accent flex-shrink-0" />
+          <div className="flex-1 text-sm font-medium">My Orders</div>
+          <ChevronRight size={16} className="text-text-muted" />
+        </Link>
+      </div>
 
       <div className="card mb-6">
         <div className="flex items-center justify-between mb-4">

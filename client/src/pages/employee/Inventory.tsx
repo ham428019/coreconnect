@@ -9,10 +9,11 @@ import PageHeader from '../../components/layout/PageHeader';
 export default function EmployeeInventory() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('all');
 
   const { data, isLoading } = useQuery({
     queryKey: ['employee', 'products', search],
-    queryFn: () => api.get<{ products: Product[] }>(`/products?limit=100&search=${search}`),
+    queryFn: () => api.get<{ products: Product[] }>(`/products?limit=1000&search=${search}`),
   });
 
   const updateStock = useMutation({
@@ -25,10 +26,16 @@ export default function EmployeeInventory() {
   const products = data?.data?.products || [];
   const lowStock = products.filter(p => p.stockQty <= (p.lowStockThreshold || 10) && p.stockQty > 0);
   const outOfStock = products.filter(p => p.stockQty === 0);
+  const filtered = products.filter(p => {
+    if (status === 'low') return p.stockQty > 0 && p.stockQty <= (p.lowStockThreshold || 10);
+    if (status === 'out') return p.stockQty === 0;
+    if (status === 'in') return p.stockQty > (p.lowStockThreshold || 10);
+    return true;
+  });
 
   return (
     <div>
-      <PageHeader title="Inventory Management" subtitle={`${products.length} products in stock`} />
+      <PageHeader title="Inventory Management" subtitle={`${data?.meta?.total ?? products.length} products in stock`} />
 
       {(lowStock.length > 0 || outOfStock.length > 0) && (
         <div className="card mb-6 bg-yellow-50 dark:bg-yellow-900/20 border-warning dark:border-yellow-700">
@@ -42,14 +49,27 @@ export default function EmployeeInventory() {
         </div>
       )}
 
-      <div className="relative mb-4">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search inventory..."
-          className="input !pl-10 !py-2"
-        />
+      <div className="flex gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search inventory..."
+            className="input !pl-10 !py-2"
+          />
+        </div>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          aria-label="Filter by stock status"
+          className="input !py-2 w-44"
+        >
+          <option value="all">All statuses</option>
+          <option value="low">Low stock</option>
+          <option value="out">Out of stock</option>
+          <option value="in">In stock</option>
+        </select>
       </div>
 
       <div className="card">
@@ -67,7 +87,7 @@ export default function EmployeeInventory() {
           <tbody>
             {isLoading ? (
               <tr><td colSpan={6} className="py-8 text-center text-text-muted">Loading...</td></tr>
-            ) : products.map((product) => (
+            ) : filtered.map((product) => (
               <tr key={product.id} className="border-b border-border hover:bg-gray-50">
                 <td className="py-2 font-medium">{product.name}</td>
                 <td className="py-2 text-text-muted text-xs">{product.sku}</td>

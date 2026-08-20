@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { DollarSign, ShoppingBag, Users, Package, AlertTriangle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { api, formatCurrency } from '../../lib/api';
+import { api, formatCurrency, formatCurrencyCompact, chartTicks } from '../../lib/api';
 import PageHeader from '../../components/layout/PageHeader';
 import DashboardTitleBar from '../../components/layout/DashboardTitleBar';
+import ChartTooltip from '../../components/charts/ChartTooltip';
 
 export default function AdminDashboard() {
   const { data } = useQuery({
@@ -11,23 +12,29 @@ export default function AdminDashboard() {
     queryFn: () => api.get('/analytics/sales'),
   });
 
+  const { data: overviewData } = useQuery({
+    queryKey: ['admin', 'analytics-overview'],
+    queryFn: () => api.get('/analytics/overview'),
+  });
+
   const analytics = (data?.data || {}) as any;
   const kpi = analytics.kpi || {};
+  const monthlyRevenue = (overviewData?.data as any)?.monthlyRevenue || [];
+
+  const chartData = monthlyRevenue.map((m: any) => ({
+    month: new Date(m.month).toLocaleString('en-US', { month: 'short', year: 'numeric' }),
+    revenue: Number(m.revenue),
+    orders: Number(m.orders),
+  }));
+
+  const revenueTicks = chartTicks(chartData.length ? Math.max(...chartData.map((d: any) => d.revenue)) : 0);
+  const orderTicks = chartTicks(chartData.length ? Math.max(...chartData.map((d: any) => d.orders)) : 0);
 
   const stats = [
     { label: 'Total Revenue', value: formatCurrency(kpi.totalRevenue || 0), icon: DollarSign, color: 'bg-green-500' },
     { label: 'Total Orders', value: kpi.totalOrders || 0, icon: ShoppingBag, color: 'bg-blue-500' },
     { label: 'Total Users', value: kpi.totalUsers || 0, icon: Users, color: 'bg-purple-500' },
     { label: 'Products', value: kpi.totalProducts || 0, icon: Package, color: 'bg-orange-500' },
-  ];
-
-  const chartData = [
-    { month: 'Jan', revenue: 4200, orders: 42 },
-    { month: 'Feb', revenue: 3800, orders: 38 },
-    { month: 'Mar', revenue: 5100, orders: 51 },
-    { month: 'Apr', revenue: 4600, orders: 46 },
-    { month: 'May', revenue: 5800, orders: 58 },
-    { month: 'Jun', revenue: 6200, orders: 62 },
   ];
 
   return (
@@ -63,28 +70,36 @@ export default function AdminDashboard() {
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="card">
           <h3 className="font-semibold mb-4">Revenue Overview</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-              <XAxis dataKey="month" stroke="#64748B" fontSize={12} />
-              <YAxis stroke="#64748B" fontSize={12} />
-              <Tooltip />
-              <Bar dataKey="revenue" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {chartData.length === 0 ? (
+            <p className="text-sm text-text-muted">No data yet</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis dataKey="month" stroke="#64748B" fontSize={12} interval={0} angle={-45} textAnchor="end" height={64} />
+                <YAxis stroke="#64748B" fontSize={12} domain={[0, revenueTicks.max]} ticks={revenueTicks.ticks} tickFormatter={(v: number) => formatCurrencyCompact(v)} />
+                <Tooltip content={<ChartTooltip currency />} />
+                <Bar dataKey="revenue" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </div>
 
         <div className="card">
           <h3 className="font-semibold mb-4">Order Trends</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-              <XAxis dataKey="month" stroke="#64748B" fontSize={12} />
-              <YAxis stroke="#64748B" fontSize={12} />
-              <Tooltip />
-              <Line type="monotone" dataKey="orders" stroke="#10B981" strokeWidth={2} dot={{ r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          {chartData.length === 0 ? (
+            <p className="text-sm text-text-muted">No data yet</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis dataKey="month" stroke="#64748B" fontSize={12} interval={0} angle={-45} textAnchor="end" height={64} />
+                <YAxis stroke="#64748B" fontSize={12} domain={[0, orderTicks.max]} ticks={orderTicks.ticks} />
+                <Tooltip content={<ChartTooltip />} />
+                <Line type="monotone" dataKey="orders" stroke="#10B981" strokeWidth={2} dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 

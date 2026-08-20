@@ -12,10 +12,11 @@ async function main() {
 
   const hashFor = (password: string) => bcrypt.hash(password, 12);
 
-  const [adminHash, managerHash, employeeHash, anneHash, beckerHash, christineHash, jenniferHash, davidHash, emilyHash, michaelHash, sophiaHash, jamesHash, oliviaHash, danielHash, graceHash, henryHash, isabellaHash, lucasHash, victoriaHash, ethanHash, avaHash, noahHash, miaHash, jackHash, lilyHash, oliverHash] = await Promise.all([
-    hashFor('admin123'),
-    hashFor('manager123'),
-    hashFor('employee123'),
+  const [adminHash, managerHash, emmaHash, liamHash, anneHash, beckerHash, christineHash, jenniferHash, davidHash, emilyHash, michaelHash, sophiaHash, jamesHash, oliviaHash, danielHash, graceHash, henryHash, isabellaHash, lucasHash, victoriaHash, ethanHash, avaHash, noahHash, miaHash, jackHash, lilyHash, oliverHash] = await Promise.all([
+    hashFor('admin_123'),
+    hashFor('jane_123'),
+    hashFor('emma_123'),
+    hashFor('liam_123'),
     hashFor('anne123'),
     hashFor('becker123'),
     hashFor('christine123'),
@@ -42,10 +43,10 @@ async function main() {
   ]);
 
   await Promise.all([
-    prisma.user.upsert({ where: { email: 'admin@coreconnect.com' }, update: {}, create: { email: 'admin@coreconnect.com', passwordHash: adminHash, firstName: 'Admin', lastName: 'User', role: UserRole.ADMIN } }),
-    prisma.user.upsert({ where: { email: 'manager@coreconnect.com' }, update: {}, create: { email: 'manager@coreconnect.com', passwordHash: managerHash, firstName: 'Jane', lastName: 'Smith', role: UserRole.MANAGER } }),
-    prisma.user.upsert({ where: { email: 'employee1@coreconnect.com' }, update: {}, create: { email: 'employee1@coreconnect.com', passwordHash: employeeHash, firstName: 'Emma', lastName: 'Brown', role: UserRole.EMPLOYEE } }),
-    prisma.user.upsert({ where: { email: 'employee2@coreconnect.com' }, update: {}, create: { email: 'employee2@coreconnect.com', passwordHash: employeeHash, firstName: 'Liam', lastName: 'Wilson', role: UserRole.EMPLOYEE } }),
+    prisma.user.upsert({ where: { email: 'admin0admin@coreconnect.com' }, update: {}, create: { email: 'admin0admin@coreconnect.com', passwordHash: adminHash, firstName: 'Admin', lastName: 'User', role: UserRole.ADMIN } }),
+    prisma.user.upsert({ where: { email: 'jane0manager@coreconnect.com' }, update: {}, create: { email: 'jane0manager@coreconnect.com', passwordHash: managerHash, firstName: 'Jane', lastName: 'Smith', role: UserRole.MANAGER } }),
+    prisma.user.upsert({ where: { email: 'emma0employee@coreconnect.com' }, update: {}, create: { email: 'emma0employee@coreconnect.com', passwordHash: emmaHash, firstName: 'Emma', lastName: 'Brown', role: UserRole.EMPLOYEE } }),
+    prisma.user.upsert({ where: { email: 'liam0employee@coreconnect.com' }, update: {}, create: { email: 'liam0employee@coreconnect.com', passwordHash: liamHash, firstName: 'Liam', lastName: 'Wilson', role: UserRole.EMPLOYEE } }),
     prisma.user.upsert({ where: { email: 'anne@coreconnect.com' }, update: {}, create: { email: 'anne@coreconnect.com', passwordHash: anneHash, firstName: 'Anne', lastName: '', role: UserRole.CUSTOMER } }),
     prisma.user.upsert({ where: { email: 'becker@coreconnect.com' }, update: {}, create: { email: 'becker@coreconnect.com', passwordHash: beckerHash, firstName: 'Becker', lastName: '', role: UserRole.CUSTOMER } }),
     prisma.user.upsert({ where: { email: 'christine@coreconnect.com' }, update: {}, create: { email: 'christine@coreconnect.com', passwordHash: christineHash, firstName: 'Christine', lastName: '', role: UserRole.CUSTOMER } }),

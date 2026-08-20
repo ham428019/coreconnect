@@ -1,12 +1,46 @@
-import { PrismaClient, PaymentMethod, PaymentStatus, OrderStatus } from "@prisma/client";
+import { PrismaClient, UserRole, PaymentMethod, PaymentStatus, OrderStatus } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
 const prisma = new PrismaClient();
 
-const orderNumber = () => {
-  const year = new Date().getFullYear();
-  return `CC-${year}-${crypto.randomBytes(3).toString("hex").toUpperCase().substring(0, 5)}`;
-};
+const CUSTOMERS: { first: string; last: string }[] = [
+  { first: "Aiden", last: "Moore" },
+  { first: "Bella", last: "Anderson" },
+  { first: "Carter", last: "Thompson" },
+  { first: "Delilah", last: "White" },
+  { first: "Elijah", last: "Harris" },
+  { first: "Fiona", last: "Martin" },
+  { first: "Gabriel", last: "Clark" },
+  { first: "Hannah", last: "Lewis" },
+  { first: "Isaac", last: "Robinson" },
+  { first: "Julia", last: "Walker" },
+  { first: "Kevin", last: "Young" },
+  { first: "Laura", last: "King" },
+  { first: "Mason", last: "Wright" },
+  { first: "Natalie", last: "Scott" },
+  { first: "Owen", last: "Green" },
+  { first: "Penelope", last: "Adams" },
+  { first: "Quinn", last: "Baker" },
+  { first: "Ruby", last: "Nelson" },
+  { first: "Samuel", last: "Hill" },
+  { first: "Tessa", last: "Ramirez" },
+  { first: "Ulysses", last: "Torres" },
+  { first: "Violet", last: "Peterson" },
+  { first: "William", last: "Cooper" },
+  { first: "Xander", last: "Reed" },
+  { first: "Zoe", last: "Bailey" },
+];
+
+const STAFF = [
+  { first: "Sarah", last: "Chen", role: UserRole.EMPLOYEE },
+  { first: "Elena", last: "Rodriguez", role: UserRole.MANAGER },
+];
+
+const CITIES = ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "Austin", "Seattle", "Denver"];
+const STATES = ["NY", "CA", "IL", "TX", "AZ", "PA", "TX", "CA", "TX", "TX", "WA", "CO"];
+
+const orderNumber = () => `CC-${new Date().getFullYear()}-${crypto.randomBytes(3).toString("hex").toUpperCase().substring(0, 5)}`;
 const referenceCode = () => crypto.randomBytes(8).toString("hex").toUpperCase();
 
 const daysAgo = (n: number, hour = 12) => {
@@ -43,34 +77,68 @@ const pickStatus = () => {
 };
 
 async function main() {
+  const passwordHash = await bcrypt.hash("demo123", 12);
+  let usersCreated = 0;
+
+  for (const c of CUSTOMERS) {
+    const email = `${c.first.toLowerCase()}@coreconnect.com`;
+    const exists = await prisma.user.findUnique({ where: { email } });
+    if (exists) continue;
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        firstName: c.first,
+        lastName: c.last,
+        role: UserRole.CUSTOMER,
+        emailVerified: true,
+        addresses: {
+          create: {
+            label: "Home",
+            street: `${100 + Math.floor(Math.random() * 900)} Demo Street`,
+            city: CITIES[Math.floor(Math.random() * CITIES.length)],
+            state: STATES[Math.floor(Math.random() * STATES.length)],
+            zipCode: String(10000 + Math.floor(Math.random() * 90000)),
+            country: "US",
+            isDefault: true,
+          },
+        },
+      },
+    });
+    usersCreated++;
+  }
+
+  for (const s of STAFF) {
+    const rolePart = s.role === UserRole.MANAGER ? "manager" : "employee";
+    const email = `${s.first.toLowerCase()}0${rolePart}@coreconnect.com`;
+    const exists = await prisma.user.findUnique({ where: { email } });
+    if (exists) continue;
+    const staffHash = await bcrypt.hash(`${s.first.toLowerCase()}_123`, 12);
+    await prisma.user.create({
+      data: { email, passwordHash: staffHash, firstName: s.first, lastName: s.last, role: s.role, emailVerified: true },
+    });
+    usersCreated++;
+  }
+
+  console.log(`Created ${usersCreated} new users`);
+
   const customers = await prisma.user.findMany({ where: { role: "CUSTOMER" } });
-  if (customers.length === 0) {
-    console.log("No customer accounts found — run seed first");
-    return;
-  }
-
+  const newCustomers = customers.filter((c) => CUSTOMERS.some((n) => n.first.toLowerCase() === c.firstName.toLowerCase() && n.last.toLowerCase() === c.lastName.toLowerCase()));
   const products = await prisma.product.findMany({ where: { isActive: true } });
-  if (products.length < 5) {
-    console.log("Not enough products to build orders");
+  if (newCustomers.length === 0 || products.length < 5) {
+    console.log("No new customers to build orders for (or not enough products)");
     return;
   }
 
-  const customersWithAddresses = await Promise.all(
-    customers.map(async (c) => {
-      const addresses = await prisma.address.findMany({ where: { userId: c.id } });
-      return { ...c, addresses };
-    })
-  );
-
-  let created = 0;
-  for (const cust of customersWithAddresses) {
-    const addr = cust.addresses[0];
+  let ordersCreated = 0;
+  for (const cust of newCustomers) {
+    const addr = await prisma.address.findFirst({ where: { userId: cust.id } });
     const orderCount = 4 + Math.floor(Math.random() * 3);
 
     for (let i = 0; i < orderCount; i++) {
       const s = pickStatus();
       const itemCount = 1 + Math.floor(Math.random() * 3);
-
       const picked = [...products].sort(() => Math.random() - 0.5).slice(0, itemCount);
       const orderItems = picked.map((p) => ({
         productId: p.id,
@@ -147,11 +215,11 @@ async function main() {
           }),
         ]);
       }
-      created++;
+      ordersCreated++;
     }
   }
 
-  console.log(`Created ${created} demo orders across ${customers.length} customers`);
+  console.log(`Created ${ordersCreated} new demo orders`);
 }
 
 main()

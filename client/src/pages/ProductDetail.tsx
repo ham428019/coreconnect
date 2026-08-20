@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Star, ShoppingCart, Heart, Minus, Plus, Shield, Truck, RotateCcw } from 'lucide-react';
+import { Star, ShoppingCart, Heart, Minus, Plus, Shield, Truck, RotateCcw, Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, formatCurrency, getStockStatus } from '../lib/api';
 import { useAuthStore } from '../stores';
@@ -12,6 +12,8 @@ export default function ProductDetail() {
   const { isAuthenticated } = useAuthStore();
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -40,6 +42,18 @@ export default function ProductDetail() {
     onSuccess: () => toast.success('Added to wishlist!'),
     onError: () => toast.error('Failed to add to wishlist'),
   });
+
+  const generateSummary = async () => {
+    setSummaryLoading(true);
+    try {
+      const res: any = await api.post('/ai/summarize', { slug: product.slug });
+      setAiSummary(res.data.summary);
+    } catch (err: any) {
+      toast.error(err.message || 'Could not generate AI summary');
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -70,19 +84,19 @@ export default function ProductDetail() {
 
   return (
     <div>
-      <div className="text-sm text-text-muted mb-4">
+      <div className="text-sm text-text-muted dark:text-gray-400 mb-4">
         <Link to="/" className="hover:text-accent">Home</Link> /
         <Link to={`/category/${product.category.slug}`} className="hover:text-accent"> {product.category.name}</Link> /
-        <span className="text-text"> {product.name}</span>
+        <span className="text-text dark:text-gray-200"> {product.name}</span>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
-        <div>
-          <div className="aspect-square bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden mb-3">
+      <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
+        <div className="lg:col-span-2">
+          <div className="aspect-[4/3] bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden mb-3">
             <img
               src={product.images?.[activeImage]?.url || '/placeholder/product-1.jpg'}
               alt={product.name}
-              className="max-w-full max-h-full object-contain p-4"
+              className="max-w-full max-h-full object-contain p-3"
             />
           </div>
           {product.images.length > 1 && (
@@ -102,9 +116,9 @@ export default function ProductDetail() {
           )}
         </div>
 
-        <div>
-          <p className="text-sm text-text-muted uppercase tracking-wide">{product.brand?.name || product.category.name}</p>
-          <h1 className="text-2xl md:text-3xl font-bold mt-1">{product.name}</h1>
+        <div className="lg:col-span-3">
+          <p className="text-xs text-text-muted uppercase tracking-wide">{product.brand?.name || product.category.name}</p>
+          <h1 className="text-xl md:text-2xl font-bold mt-1">{product.name}</h1>
 
           <div className="flex items-center gap-2 mt-3">
             <div className="flex text-warning">
@@ -116,10 +130,10 @@ export default function ProductDetail() {
           </div>
 
           <div className="mt-4 flex items-baseline gap-3">
-            <span className="text-3xl font-bold text-accent">{formatCurrency(product.price)}</span>
+            <span className="text-2xl font-bold text-accent">{formatCurrency(product.price)}</span>
             {product.comparePrice && (
               <>
-                <span className="text-lg line-through text-text-muted">{formatCurrency(product.comparePrice)}</span>
+                <span className="text-base line-through text-text-muted">{formatCurrency(product.comparePrice)}</span>
                 <span className="badge badge-danger">{discount}% OFF</span>
               </>
             )}
@@ -147,9 +161,9 @@ export default function ProductDetail() {
               <button
                 onClick={() => addToCart.mutate()}
                 disabled={product.stockQty === 0 || addToCart.isPending}
-                className="btn-primary flex-1"
+                className="btn-primary flex-1 !px-4 !py-2.5"
               >
-                <ShoppingCart size={18} />
+                <ShoppingCart size={16} />
                 {addToCart.isPending ? 'Adding...' : product.stockQty === 0 ? 'Out of Stock' : 'Add to Cart'}
               </button>
               <button
@@ -157,7 +171,7 @@ export default function ProductDetail() {
                   if (!isAuthenticated) { toast.error('Please login to add to wishlist'); return; }
                   addToWishlist.mutate();
                 }}
-                className="btn-outline !px-4"
+                className="btn-outline !px-3 !py-2.5"
               >
                 <Heart size={18} />
               </button>
@@ -188,8 +202,8 @@ export default function ProductDetail() {
               <tbody>
                 {Object.entries(product.specs).map(([key, value]) => (
                   <tr key={key} className="border-b border-border last:border-0">
-                    <td className="py-3 pr-4 text-text-muted font-medium capitalize w-48">{key}</td>
-                    <td className="py-3 text-text">{value}</td>
+                    <td className="py-3 pr-4 text-text-muted dark:text-gray-400 font-medium capitalize w-48">{key}</td>
+                    <td className="py-3 text-text dark:text-gray-200">{value}</td>
                   </tr>
                 ))}
               </tbody>
@@ -199,9 +213,25 @@ export default function ProductDetail() {
       )}
 
       <div className="mt-12">
-        <h2 className="text-xl font-bold mb-4">Description</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="text-xl font-bold">Description</h2>
+          <button
+            onClick={generateSummary}
+            disabled={summaryLoading}
+            className="btn-outline text-sm !px-3 !py-1.5"
+          >
+            {summaryLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {summaryLoading ? 'Generating...' : aiSummary ? 'Regenerate AI Summary' : 'AI Summary'}
+          </button>
+        </div>
         <div className="card">
-          <p className="text-sm text-text-muted leading-relaxed whitespace-pre-wrap">{product.description}</p>
+          {aiSummary && (
+            <div className="mb-4 p-3 rounded-lg bg-accent/10 border border-accent/30 text-sm">
+              <p className="font-semibold text-accent mb-1">AI Summary</p>
+              <p className="text-text dark:text-gray-200 leading-relaxed">{aiSummary}</p>
+            </div>
+          )}
+          <p className="text-sm text-text-muted dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{product.description}</p>
         </div>
       </div>
 
@@ -225,7 +255,7 @@ export default function ProductDetail() {
                   </div>
                 </div>
                 {review.title && <p className="font-semibold text-sm mb-1">{review.title}</p>}
-                <p className="text-sm text-text-muted">{review.comment}</p>
+                <p className="text-sm text-text-muted dark:text-gray-300">{review.comment}</p>
               </div>
             ))}
           </div>

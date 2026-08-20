@@ -35,7 +35,7 @@ router.post('/', requireAuth, async (req: Request, res: Response, next: NextFunc
 
     let discountAmount = 0;
     if (couponCode) {
-      const coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
+      const coupon = await prisma.coupon.findUnique({ where: { code: String(couponCode).trim().toUpperCase() } });
       if (!coupon || !coupon.isActive) return apiError(res, 400, 'Invalid coupon code');
       if (coupon.expiresAt && new Date() > coupon.expiresAt) return apiError(res, 400, 'Coupon has expired');
       if (new Date() < coupon.startsAt) return apiError(res, 400, 'Coupon not yet active');
@@ -109,10 +109,16 @@ router.post('/', requireAuth, async (req: Request, res: Response, next: NextFunc
     });
 
     for (const item of cartItems) {
-      await prisma.product.update({
-        where: { id: item.productId },
-        data: { stockQty: { decrement: item.quantity } },
-      });
+      await prisma.$transaction([
+        prisma.product.updateMany({
+          where: { id: item.productId, stockQty: { gte: item.quantity } },
+          data: { stockQty: { decrement: item.quantity } },
+        }),
+        prisma.product.updateMany({
+          where: { id: item.productId, stockQty: { lt: item.quantity } },
+          data: { stockQty: 0 },
+        }),
+      ]);
     }
 
     await prisma.cartItem.deleteMany({ where: { userId: req.user!.userId } });

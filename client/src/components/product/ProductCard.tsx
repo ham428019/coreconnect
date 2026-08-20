@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Star, ShoppingCart, Heart } from 'lucide-react';
-import { formatCurrency } from '../../lib/api';
+import { toast } from 'sonner';
+import { api, formatCurrency } from '../../lib/api';
+import { useAuthStore } from '../../stores';
 import type { Product } from '../../types';
 
 interface Props {
@@ -9,6 +12,36 @@ interface Props {
 }
 
 export default function ProductCard({ product, variant = 'grid' }: Props) {
+  const { isAuthenticated } = useAuthStore();
+  const queryClient = useQueryClient();
+
+  const addToCart = useMutation({
+    mutationFn: () => api.post('/cart', { productId: product.id, quantity: 1 }),
+    onSuccess: () => {
+      toast.success('Added to cart!');
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const addToWishlist = useMutation({
+    mutationFn: () => api.post('/wishlist', { productId: product.id }),
+    onSuccess: () => toast.success('Added to wishlist!'),
+    onError: () => toast.error('Failed to add to wishlist'),
+  });
+
+  const handleWishlist = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) { toast.error('Please login to add to wishlist'); return; }
+    addToWishlist.mutate();
+  };
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (product.stockQty === 0) return;
+    addToCart.mutate();
+  };
+
   const discount = product.comparePrice
     ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)
     : 0;
@@ -36,6 +69,14 @@ export default function ProductCard({ product, variant = 'grid' }: Props) {
           <p className={`text-xs mt-1 ${product.stockQty === 0 ? 'text-danger' : product.stockQty <= product.lowStockThreshold ? 'text-warning' : 'text-success'}`}>
             {stockStatus}
           </p>
+          <button
+            className="btn-primary mt-3 text-sm !py-2"
+            onClick={handleAddToCart}
+            disabled={product.stockQty === 0 || addToCart.isPending}
+          >
+            <ShoppingCart size={14} />
+            {addToCart.isPending ? 'Adding...' : product.stockQty === 0 ? 'Out of Stock' : 'Add to Cart'}
+          </button>
         </div>
       </Link>
     );
@@ -54,7 +95,7 @@ export default function ProductCard({ product, variant = 'grid' }: Props) {
         )}
         <button
           className="absolute top-2 right-2 p-2 bg-bg-card/90 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent hover:text-white border border-border"
-          onClick={(e) => { e.preventDefault(); }}
+          onClick={handleWishlist}
         >
           <Heart size={16} />
         </button>
@@ -75,9 +116,11 @@ export default function ProductCard({ product, variant = 'grid' }: Props) {
         </p>
         <button
           className="btn-primary w-full mt-3 text-sm !py-2"
-          onClick={(e) => { e.preventDefault(); }}
+          onClick={handleAddToCart}
+          disabled={product.stockQty === 0 || addToCart.isPending}
         >
-          <ShoppingCart size={14} /> Add to Cart
+          <ShoppingCart size={14} />
+          {addToCart.isPending ? 'Adding...' : product.stockQty === 0 ? 'Out of Stock' : 'Add to Cart'}
         </button>
       </div>
     </Link>

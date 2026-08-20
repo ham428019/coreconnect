@@ -81,14 +81,37 @@ router.get('/overview', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMI
       }))
     );
 
-    const monthlyRevenue = await prisma.$queryRawUnsafe(`
-      SELECT DATE_TRUNC('month', "createdAt") as month, SUM("totalAmount") as revenue
+    const startMonth = new Date();
+    startMonth.setDate(1);
+    startMonth.setHours(0, 0, 0, 0);
+    startMonth.setMonth(startMonth.getMonth() - 5);
+
+    const rows = await prisma.$queryRawUnsafe<any[]>(`
+      SELECT DATE_TRUNC('month', "createdAt") as month, SUM("totalAmount") as revenue, COUNT(*) as orders
       FROM orders
-      WHERE "createdAt" >= NOW() - INTERVAL '6 months'
+      WHERE "createdAt" >= $1
         AND "status" NOT IN ('CANCELLED', 'RETURNED', 'REFUNDED')
       GROUP BY month
       ORDER BY month
-    `);
+    `, startMonth);
+
+    const byMonth = new Map<number, { revenue: number; orders: number }>();
+    for (const row of rows) {
+      const d = new Date(row.month);
+      byMonth.set(d.getFullYear() * 12 + d.getMonth(), { revenue: Number(row.revenue), orders: Number(row.orders) });
+    }
+
+    const monthlyRevenue: { month: Date; revenue: number; orders: number }[] = [];
+    for (let i = 0; i <= 5; i++) {
+      const d = new Date(startMonth);
+      d.setMonth(startMonth.getMonth() + i);
+      const key = d.getFullYear() * 12 + d.getMonth();
+      monthlyRevenue.push({
+        month: new Date(Date.UTC(d.getFullYear(), d.getMonth(), 1)),
+        revenue: byMonth.get(key)?.revenue ?? 0,
+        orders: byMonth.get(key)?.orders ?? 0,
+      });
+    }
 
     apiResponse(res, { ordersByStatus, monthlyRevenue });
   } catch (error) {

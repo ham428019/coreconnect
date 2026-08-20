@@ -1,15 +1,19 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../../lib/api';
 import type { User } from '../../types';
 import PageHeader from '../../components/layout/PageHeader';
 
+const ROLES = ['CUSTOMER', 'EMPLOYEE', 'MANAGER', 'ADMIN'];
+
 export default function AdminUsers() {
   const queryClient = useQueryClient();
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'users'],
-    queryFn: () => api.get<{ users: User[] }>('/users/admin/users'),
+    queryFn: () => api.get<{ users: User[] }>('/users/admin/users?limit=1000'),
   });
 
   const updateRole = useMutation({
@@ -19,18 +23,26 @@ export default function AdminUsers() {
   });
 
   const users = data?.data?.users || [];
+  const filteredUsers = roleFilter === 'ALL' ? users : users.filter(u => u.role === roleFilter);
 
   return (
     <div>
-      <PageHeader title="Users Management" subtitle="Manage accounts and roles" />
+      <PageHeader title="Users Management" subtitle={`${filteredUsers.length} ${roleFilter === 'ALL' ? 'users in total' : roleFilter.toLowerCase().replace('_', ' ') + 's'}`} />
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        {['CUSTOMER', 'EMPLOYEE', 'MANAGER', 'ADMIN'].map(role => (
-          <div key={role} className="card text-center">
-            <p className="text-2xl font-bold">{users.filter(u => u.role === role).length}</p>
-            <p className="text-xs text-text-muted mt-1">{role.replace('_', ' ')}</p>
-          </div>
-        ))}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {['ALL', ...ROLES].map(r => {
+          const active = roleFilter === r;
+          const count = r === 'ALL' ? users.length : users.filter(u => u.role === r).length;
+          return (
+            <button
+              key={r}
+              onClick={() => setRoleFilter(r)}
+              className={`px-4 py-2 rounded-btn text-sm font-medium border transition-colors ${active ? 'bg-accent border-accent text-white hover:bg-accent-hover' : 'bg-bg-card dark:bg-gray-800 border-border dark:border-gray-600 text-text dark:text-white hover:bg-bg dark:hover:bg-gray-700'}`}
+            >
+              {r === 'ALL' ? 'All' : r.replace('_', ' ').toLowerCase()} <span className={`ml-1 text-xs ${active ? 'text-white/80' : 'text-text-muted dark:text-gray-400'}`}>({count})</span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="card">
@@ -47,7 +59,7 @@ export default function AdminUsers() {
           <tbody>
             {isLoading ? (
               <tr><td colSpan={5} className="py-8 text-center text-text-muted">Loading...</td></tr>
-            ) : users.map((user) => (
+            ) : filteredUsers.map((user) => (
               <tr key={user.id} className="border-b border-border hover:bg-gray-50">
                 <td className="py-2 font-medium">{user.firstName} {user.lastName}</td>
                 <td className="py-2 text-text-muted">{user.email}</td>
