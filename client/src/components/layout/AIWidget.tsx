@@ -50,10 +50,14 @@ export default function AIWidget() {
     try {
       const res = await fetch('/api/v1/ai/chat', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, sessionId }),
       });
       const data = await res.json();
+      if (!res.ok || !data?.data) {
+        throw new Error(data?.message || 'The assistant is unavailable right now.');
+      }
       const reply = data.data;
 
       setMessages((prev) => [
@@ -69,10 +73,10 @@ export default function AIWidget() {
           action: reply.action,
         },
       ]);
-    } catch {
+    } catch (error) {
       setMessages((prev) => [
         ...prev,
-        { role: 'bot', text: 'Sorry, I\'m having trouble right now. Please try again later.', suggestions: defaultSuggestions },
+        { role: 'bot', text: error instanceof Error ? error.message : 'Sorry, I\'m having trouble right now. Please try again later.', suggestions: defaultSuggestions },
       ]);
     } finally {
       setLoading(false);
@@ -91,13 +95,15 @@ export default function AIWidget() {
     <>
       <button
         onClick={() => setOpen(!open)}
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-accent text-white shadow-lg hover:bg-accent-hover transition-all flex items-center justify-center ${!open ? 'animate-bounce' : ''}`}
+        className={`fixed bottom-4 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-white shadow-lg transition-all hover:bg-accent-hover sm:bottom-6 sm:right-6 ${!open ? 'animate-bounce' : ''}`}
+        aria-label={open ? 'Close AI shopping assistant' : 'Open AI shopping assistant'}
+        aria-expanded={open}
       >
         {open ? <X size={24} /> : <MessageCircle size={24} />}
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-96 h-[500px] bg-white dark:bg-gray-800 rounded-modal shadow-2xl border border-border dark:border-gray-700 flex flex-col overflow-hidden">
+        <div className="fixed bottom-20 right-4 z-50 flex h-[min(500px,calc(100vh-7rem))] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-modal border border-border bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-800 sm:bottom-24 sm:right-6 sm:w-96" role="dialog" aria-label="Core AI shopping assistant">
           <div className="bg-primary text-white px-4 py-3 flex items-center gap-2">
             <Sparkles size={18} className="text-accent" />
             <div>
@@ -162,7 +168,7 @@ export default function AIWidget() {
                       {msg.categories.map((c, idx) => (
                         <button
                           key={idx}
-                          onClick={() => navigate(`/products?category=${c}`)}
+                          onClick={() => navigate(`/category/${c}`)}
                           className="text-xs bg-accent/10 text-accent border border-accent/30 rounded-full px-3 py-1 hover:bg-accent hover:text-white transition-colors"
                         >
                           {c}

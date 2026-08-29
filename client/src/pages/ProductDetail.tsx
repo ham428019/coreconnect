@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Star, ShoppingCart, Heart, Minus, Plus, Shield, Truck, RotateCcw, Sparkles, Loader2 } from 'lucide-react';
+import { Star, ShoppingCart, Heart, Minus, Plus, Shield, Truck, RotateCcw, Sparkles, Loader2, CheckCircle2, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, formatCurrency, getStockStatus } from '../lib/api';
 import { useAuthStore } from '../stores';
@@ -13,6 +13,7 @@ export default function ProductDetail() {
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const queryClient = useQueryClient();
 
@@ -45,11 +46,14 @@ export default function ProductDetail() {
 
   const generateSummary = async () => {
     setSummaryLoading(true);
+    setSummaryError(null);
     try {
-      const res: any = await api.post('/ai/summarize', { slug: product.slug });
+      const res = await api.post<{ summary: string }>('/ai/summarize', { slug: product.slug });
       setAiSummary(res.data.summary);
     } catch (err: any) {
-      toast.error(err.message || 'Could not generate AI summary');
+      const message = err.message || 'AI summary is unavailable right now. Please try again later.';
+      setSummaryError(message);
+      toast.error(message);
     } finally {
       setSummaryLoading(false);
     }
@@ -81,6 +85,18 @@ export default function ProductDetail() {
   const discount = product.comparePrice
     ? Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)
     : 0;
+  const detailRows = [
+    ['Brand', product.brand?.name],
+    ['Category', product.category?.name],
+    ['Product type', product.productType],
+    ['SKU', product.sku],
+    ['Warranty', product.warranty],
+    ['Compatibility', product.compatibility?.join(', ')],
+    ['Use cases', product.useCases?.join(', ')],
+    ['Colors', product.colors?.join(', ')],
+    ['Dimensions', product.dimensions],
+    ['Weight', product.weight != null ? `${product.weight} kg` : undefined],
+  ].filter((row): row is string[] => Boolean(row[1]));
 
   return (
     <div>
@@ -144,7 +160,7 @@ export default function ProductDetail() {
           </p>
 
           <p className="text-sm text-text-muted mt-4 leading-relaxed">
-            {product.shortDescription || product.description.substring(0, 200)}...
+            {product.shortDescription || product.description.substring(0, 200)}{!product.shortDescription && product.description.length > 200 ? '…' : ''}
           </p>
 
           <div className="mt-6 space-y-3">
@@ -181,10 +197,10 @@ export default function ProductDetail() {
           <div className="mt-6 grid grid-cols-3 gap-3 text-center text-sm">
             {[
               { icon: Truck, label: 'Free Shipping', sub: 'Over $75' },
-              { icon: Shield, label: 'Warranty', sub: 'Manufacturer' },
+              { icon: Shield, label: 'Warranty', sub: product.warranty || 'See product info' },
               { icon: RotateCcw, label: 'Returns', sub: '14 Days' },
             ].map((item) => (
-              <div key={item.label} className="bg-gray-50 rounded-lg p-3">
+              <div key={item.label} className="rounded-lg border border-border bg-bg p-3 dark:bg-slate-800">
                 <item.icon size={18} className="mx-auto mb-1 text-accent" />
                 <p className="font-semibold text-xs">{item.label}</p>
                 <p className="text-xs text-text-muted">{item.sub}</p>
@@ -194,10 +210,43 @@ export default function ProductDetail() {
         </div>
       </div>
 
-      {product.specs && (
+      {(product.keyFeatures?.length > 0 || detailRows.length > 0) && (
+        <div className="mt-12 grid gap-6 lg:grid-cols-2">
+          {product.keyFeatures?.length > 0 && (
+            <section>
+              <h2 className="mb-4 text-xl font-bold">Key Features</h2>
+              <div className="card h-[calc(100%-2.75rem)]">
+                <ul className="grid gap-3 sm:grid-cols-2">
+                  {product.keyFeatures.map(feature => (
+                    <li key={feature} className="flex items-start gap-2 text-sm leading-6 text-text-muted dark:text-slate-300">
+                      <CheckCircle2 size={17} className="mt-1 shrink-0 text-accent" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          )}
+          {detailRows.length > 0 && (
+            <section>
+              <h2 className="mb-4 text-xl font-bold">Product Information</h2>
+              <dl className="card grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                {detailRows.map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-text-muted">{label}</dt>
+                    <dd className="mt-1 text-sm font-medium text-text dark:text-slate-200">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+        </div>
+      )}
+
+      {product.specs && Object.keys(product.specs).length > 0 && (
         <div className="mt-12">
           <h2 className="text-xl font-bold mb-4">Specifications</h2>
-          <div className="card">
+          <div className="card overflow-x-auto">
             <table className="w-full text-sm">
               <tbody>
                 {Object.entries(product.specs).map(([key, value]) => (
@@ -229,6 +278,12 @@ export default function ProductDetail() {
             <div className="mb-4 p-3 rounded-lg bg-accent/10 border border-accent/30 text-sm">
               <p className="font-semibold text-accent mb-1">AI Summary</p>
               <p className="text-text dark:text-gray-200 leading-relaxed">{aiSummary}</p>
+            </div>
+          )}
+          {summaryError && (
+            <div role="alert" className="mb-4 flex items-start gap-2 rounded-lg border border-danger/25 bg-danger/5 p-3 text-sm text-danger">
+              <Info size={17} className="mt-0.5 shrink-0" />
+              <p>{summaryError}</p>
             </div>
           )}
           <p className="text-sm text-text-muted dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{product.description}</p>

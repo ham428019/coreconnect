@@ -29,7 +29,7 @@ export default function Footer() {
         <div className="text-center mb-10">
           <div className="flex items-center justify-center gap-2">
             <img src="/cc-logo.png" alt="CoreConnect" className="h-12 w-12 object-contain" />
-            <h3 className="font-cursive text-3xl text-accent">CoreConnect</h3>
+            <h3 className="font-display text-2xl font-extrabold tracking-tight text-blue-200">CoreConnect</h3>
           </div>
           <div className="ornament mx-auto my-3 text-accent">✦</div>
           <p className="text-sm text-white/60">Your Core Destination for Tech Accessories. Quality products at great prices.</p>

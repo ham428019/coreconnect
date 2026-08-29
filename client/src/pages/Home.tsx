@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Shield, Truck, RotateCcw, Headphones, Zap, Gamepad2, Smartphone, Cpu, Monitor, Wifi, HardDrive, Camera, Watch, Radio, Plug, Keyboard, Mouse, Router } from 'lucide-react';
+import { ArrowRight, Shield, Truck, RotateCcw, Headphones, Zap, Gamepad2, Smartphone, Cpu, Monitor, HardDrive, Camera, Watch, Radio, Plug, Router } from 'lucide-react';
 import { api } from '../lib/api';
 import { getFallbackProducts, getFallbackCategories } from '../lib/fallbackData';
 import ProductCard from '../components/product/ProductCard';
@@ -47,36 +47,48 @@ export default function Home() {
 
   return (
     <div>
-      <section className="bg-primary text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: 'radial-gradient(circle at 20% 30%, #A67C3D 0, transparent 40%), radial-gradient(circle at 80% 70%, #A67C3D 0, transparent 40%)',
-        }} />
-        <div className="max-w-7xl mx-auto px-4 py-16 md:py-24 relative">
-          <div className="max-w-2xl">
-            <div className="ornament justify-start mb-4 text-accent">
-              <span className="text-sm uppercase tracking-[0.3em] text-accent">Est. 1987</span>
-            </div>
-            <h1 className="font-mono text-4xl md:text-6xl font-bold leading-tight mb-4">
-              Your Core Destination<br className="hidden md:block" />{' '}
-              <span className="text-accent italic whitespace-nowrap">for Tech</span>
+      <section className="relative isolate overflow-hidden bg-primary text-white">
+        <img
+          src="/images/coreconnect-hero.webp"
+          alt="Premium computer hardware setup with a desktop PC, monitor, keyboard, mouse, graphics card and headphones"
+          className="absolute inset-0 -z-20 h-full w-full object-cover object-[66%_center] sm:object-[62%_center] lg:object-center"
+          fetchPriority="high"
+        />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#071727] via-[#0c2138]/95 to-[#102a43]/25 sm:via-[#0c2138]/88 lg:via-[#0c2138]/72" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-primary/95 via-transparent to-primary/25" />
+
+        <div className="relative mx-auto max-w-7xl px-4 pb-8 pt-16 sm:pt-20 md:pb-10 md:pt-24 lg:pt-28">
+          <div className="max-w-xl lg:max-w-2xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-blue-100 backdrop-blur-sm">
+              <Zap size={14} className="text-blue-300" /> Hardware. Peripherals. More.
+            </span>
+            <h1 className="mt-5 text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
+              Power your next
+              <span className="block text-blue-300">great setup.</span>
             </h1>
-            <p className="text-lg text-white/70 mb-8 font-serif italic">
-              Premium tech accessories and components. From gaming gear to mobile essentials — everything you need, delivered to your door.
+            <p className="mt-5 max-w-xl text-base leading-7 text-slate-200 sm:text-lg sm:leading-8">
+              Discover trusted components, gaming gear and everyday technology with clear specifications, honest stock information and secure checkout.
             </p>
-            <div className="flex gap-3">
-              <Link to="/category/peripherals" className="btn-primary">Shop Now</Link>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link to="/category/computer-components" className="btn-primary w-full shadow-lg shadow-blue-950/20 sm:w-auto">
+                Shop Components <ArrowRight size={17} />
+              </Link>
+              <Link to="/category/gaming" className="btn-outline w-full border-white/35 bg-white/5 text-white backdrop-blur-sm hover:border-white hover:bg-white hover:text-primary sm:w-auto">
+                Explore Gaming
+              </Link>
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
+
+          <div className="mt-12 grid grid-cols-2 gap-2.5 sm:gap-3 md:mt-16 md:grid-cols-4 lg:max-w-5xl">
             {[
               { icon: Truck, label: 'Free Shipping over $75' },
               { icon: Shield, label: 'Secure Checkout' },
               { icon: RotateCcw, label: '14-Day Returns' },
-              { icon: Headphones, label: '24/7 Support' },
+              { icon: Headphones, label: 'Helpful Support' },
             ].map((item) => (
-              <div key={item.label} className="flex items-center gap-3 bg-white/5 rounded-xl p-4 border border-white/10">
-                <item.icon size={20} className="text-accent flex-shrink-0" />
-                <span className="text-sm">{item.label}</span>
+              <div key={item.label} className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-slate-950/30 p-3 backdrop-blur-md sm:gap-3 sm:p-4">
+                <item.icon size={19} className="shrink-0 text-blue-300" />
+                <span className="text-xs font-medium text-slate-100 sm:text-sm">{item.label}</span>
               </div>
             ))}
           </div>
@@ -132,8 +144,8 @@ export default function Home() {
 
       <section className="max-w-7xl mx-auto px-4 py-16 text-center">
         <div className="bg-primary rounded-hero p-10 md:p-16 text-white relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10" style={{
-            backgroundImage: 'radial-gradient(circle at 30% 40%, #A67C3D 0, transparent 45%), radial-gradient(circle at 70% 60%, #A67C3D 0, transparent 45%)',
+          <div className="absolute inset-0 opacity-20" style={{
+            backgroundImage: 'radial-gradient(circle at 30% 40%, #6FA4D1 0, transparent 45%), radial-gradient(circle at 70% 60%, #3B6F9F 0, transparent 45%)',
           }} />
           <div className="relative">
             <div className="ornament mx-auto mb-4 text-accent">✦</div>

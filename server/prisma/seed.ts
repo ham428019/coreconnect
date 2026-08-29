@@ -308,6 +308,11 @@ async function main() {
           isDigital: p.isDigital || false,
           tags: p.tags,
           specs: p.specs,
+          productType: p.tags[0] || null,
+          keyFeatures: Object.entries(p.specs).map(([key, value]) => `${key.replace(/[-_]/g, ' ')}: ${value}`).slice(0, 8),
+          warranty: p.specs.warranty || null,
+          compatibility: p.specs.compatibility ? [p.specs.compatibility] : [],
+          useCases: p.tags.filter(tag => ['gaming', 'esports', 'office', 'productivity', 'professional', 'programming', 'creator', 'travel', 'portable', 'repair', 'beginner', 'photography', 'surveillance', 'smart-home', 'overclocking'].includes(tag)),
           categoryId: cat.id,
           brandId: brand?.id || null,
           images: {

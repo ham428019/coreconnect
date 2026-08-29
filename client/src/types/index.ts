@@ -54,6 +54,14 @@ export interface Product {
   isDigital: boolean;
   tags: string[];
   specs?: Record<string, string>;
+  productType?: string;
+  keyFeatures: string[];
+  warranty?: string;
+  compatibility: string[];
+  useCases: string[];
+  colors: string[];
+  dimensions?: string;
+  weight?: number;
   category: Category;
   brand?: Brand;
   images: ProductImage[];

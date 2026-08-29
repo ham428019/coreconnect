@@ -5,6 +5,7 @@ import { AuthPayload } from '../../middleware/requireAuth';
 import { apiResponse } from '../../utils/helpers';
 import { chatWithHF } from './ai.service';
 import { UserRole } from '@prisma/client';
+import { CatalogProduct, resolveCatalogIntent } from './catalog-intelligence';
 
 const router = Router();
 
@@ -97,7 +98,7 @@ function getContext(key: string): ConversationContext {
   return ctx;
 }
 
-const DEICTIC = /\b(this|that|these|those|it|them|the)\b/i;
+const DEICTIC = /\b(this|that|these|those|it|its|them|they|their)\b/i;
 
 const isStaff = (role?: UserRole): boolean =>
   role === UserRole.EMPLOYEE || role === UserRole.MANAGER || role === UserRole.ADMIN;
@@ -153,21 +154,7 @@ function getFallback(role?: UserRole): ChatReply {
 /*  Real product catalog + retrieval engine (DB-backed, no guessing)   */
 /* ------------------------------------------------------------------ */
 
-interface CatalogItem {
-  name: string;
-  slug: string;
-  price: number;
-  stockQty: number;
-  lowStockThreshold: number;
-  tags: string[];
-  specs: Record<string, string>;
-  description: string;
-  brand: string | null;
-  category: string;
-  rating: number;
-  reviewCount: number;
-  orderCount: number;
-}
+type CatalogItem = CatalogProduct;
 
 const PRODUCT_TYPES: { words: string[]; tags: string[]; label: string }[] = [
   { words: ['keyboard', 'keyboards'], tags: ['keyboard'], label: 'keyboards' },
@@ -231,12 +218,15 @@ async function loadCatalog(): Promise<CatalogItem[]> {
     include: {
       category: true,
       brand: true,
+      variants: { where: { isActive: true }, select: { name: true } },
       _count: { select: { orderItems: true } },
       reviews: { select: { rating: true } },
     },
   });
   return products.map(p => {
-    const specs = (p.specs || {}) as Record<string, string>;
+    const specs = Object.fromEntries(
+      Object.entries((p.specs || {}) as Record<string, unknown>).map(([key, value]) => [key, String(value)]),
+    );
     const ratings = p.reviews.map(r => r.rating);
     return {
       name: p.name,
@@ -247,8 +237,18 @@ async function loadCatalog(): Promise<CatalogItem[]> {
       tags: p.tags || [],
       specs,
       description: p.description || '',
+      shortDescription: p.shortDescription || '',
       brand: p.brand?.name || null,
       category: p.category?.name || '',
+      productType: p.productType || null,
+      keyFeatures: p.keyFeatures || [],
+      warranty: p.warranty || null,
+      compatibility: p.compatibility || [],
+      useCases: p.useCases || [],
+      colors: p.colors || [],
+      dimensions: p.dimensions || null,
+      weight: p.weight ?? null,
+      variants: p.variants.map(variant => variant.name),
       rating: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0,
       reviewCount: ratings.length,
       orderCount: p._count.orderItems,
@@ -695,6 +695,17 @@ async function resolveCustomerIntent(message: string, ctx: ConversationContext, 
   const catalog = await loadCatalog();
   const brands = (await prisma.brand.findMany({ select: { name: true } })).map(b => b.name);
 
+  const catalogReply = resolveCatalogIntent(catalog, message, {
+    lastProduct: ctx.lastProduct,
+    lastProducts: ctx.lastProducts,
+  });
+  if (catalogReply) {
+    if (catalogReply.lastProduct !== undefined) ctx.lastProduct = catalogReply.lastProduct;
+    if (catalogReply.lastProducts !== undefined) ctx.lastProducts = catalogReply.lastProducts;
+    const { lastProduct: _lastProduct, lastProducts: _lastProducts, ...reply } = catalogReply;
+    return reply;
+  }
+
   const productQuestion = await resolveProductQuestion(catalog, msg, ctx);
   if (productQuestion) return productQuestion;
 
@@ -963,55 +974,87 @@ router.post('/chat', optionalAuth, async (req: Request, res: Response) => {
     : `Conversation so far:\n${historyLines}\n\nUser: ${msg}\n\nNote: no matching products were found in the catalog. Be honest about this and do not invent products.`;
 
   const llmReply = await chatWithHF(buildSystemPrompt(role), userPrompt);
-  if (llmReply) {
-    respond(context.length > 0 ? { reply: llmReply, links: context.map(p => ({ label: p.name, slug: p.slug })) } : { reply: llmReply });
+  if (llmReply.ok) {
+    respond(context.length > 0 ? { reply: llmReply.content, links: context.map(p => ({ label: p.name, slug: p.slug })) } : { reply: llmReply.content });
     return;
   }
 
-  respond(getFallback(role));
+  respond({
+    reply: `${llmReply.message} I can still answer catalog questions about price, stock, warranty, specifications, filters, counts, comparisons and recommendations.`,
+    suggestions: ['Show me gaming products', 'How many keyboards are in stock?', 'Recommendations'],
+  });
 });
 
 const summaryCache = new Map<string, { summary: string; at: number }>();
 const SUMMARY_TTL = 60 * 60 * 1000;
 
 router.post('/summarize', async (req: Request, res: Response) => {
-  const { slug } = req.body;
-  if (!slug || typeof slug !== 'string') {
-    res.status(400).json({ success: false, message: 'Product slug is required' });
-    return;
+  try {
+    const { slug } = req.body;
+    if (!slug || typeof slug !== 'string') {
+      res.status(400).json({ success: false, message: 'Product slug is required' });
+      return;
+    }
+
+    const cached = summaryCache.get(slug);
+    if (cached && Date.now() - cached.at < SUMMARY_TTL) {
+      apiResponse(res, { summary: cached.summary });
+      return;
+    }
+
+    const product = await prisma.product.findUnique({
+      where: { slug },
+      include: { category: true, brand: true, variants: { where: { isActive: true } } },
+    });
+
+    if (!product) {
+      res.status(404).json({ success: false, message: 'Product not found' });
+      return;
+    }
+
+    const sourceFacts = [
+      `Name: ${product.name}`,
+      `Category: ${product.category?.name || 'Not listed'}`,
+      `Product type: ${product.productType || 'Not listed'}`,
+      `Brand: ${product.brand?.name || 'Not listed'}`,
+      `Price: $${product.price}`,
+      `Stock: ${product.stockQty}`,
+      `Warranty: ${product.warranty || 'Not listed'}`,
+      `Key features: ${(product.keyFeatures || []).join('; ') || 'Not listed'}`,
+      `Compatibility: ${(product.compatibility || []).join('; ') || 'Not listed'}`,
+      `Use cases: ${(product.useCases || []).join('; ') || 'Not listed'}`,
+      `Colors: ${(product.colors || []).join('; ') || 'Not listed'}`,
+      `Dimensions: ${product.dimensions || 'Not listed'}`,
+      `Weight: ${product.weight ?? 'Not listed'}`,
+      `Variants: ${product.variants.map(variant => variant.name).join('; ') || 'Not listed'}`,
+      `Specifications: ${Object.entries((product.specs || {}) as Record<string, unknown>).map(([key, value]) => `${key}=${value}`).join('; ') || 'Not listed'}`,
+      `Description: ${(product.description || '').slice(0, 1500)}`,
+    ].join('\n');
+
+    const systemPrompt = 'You are Core, a factual shopping assistant. Write only one or two concise sentences. Use only facts explicitly supplied in the catalog record. Do not infer, add, embellish, or guess any specification. Omit unavailable fields. Do not use markdown.';
+    const summaryResult = await chatWithHF(systemPrompt, `Summarize this exact catalog record for a shopper:\n${sourceFacts}`);
+    if (!summaryResult.ok) {
+      const status = summaryResult.code === 'not_configured' ? 503 : summaryResult.code === 'timeout' ? 504 : 502;
+      res.status(status).json({ success: false, message: summaryResult.message, code: summaryResult.code });
+      return;
+    }
+
+    // Reject a response if it introduces a number that is absent from the factual record.
+    const sourceNumbers = new Set(sourceFacts.match(/\d+(?:[.,]\d+)*/g) || []);
+    const unsupportedNumber = (summaryResult.content.match(/\d+(?:[.,]\d+)*/g) || [])
+      .find(number => !sourceNumbers.has(number));
+    if (unsupportedNumber) {
+      console.error(`[ai] Rejected ungrounded summary for ${slug}: unsupported numeric fact ${unsupportedNumber}.`);
+      res.status(502).json({ success: false, message: 'The AI response could not be verified against this product. Please try again.' });
+      return;
+    }
+
+    summaryCache.set(slug, { summary: summaryResult.content, at: Date.now() });
+    apiResponse(res, { summary: summaryResult.content });
+  } catch (error) {
+    console.error('[ai] Product summary failed:', error);
+    res.status(500).json({ success: false, message: 'The product summary could not be generated right now. Please try again.' });
   }
-
-  const cached = summaryCache.get(slug);
-  if (cached && Date.now() - cached.at < SUMMARY_TTL) {
-    apiResponse(res, { summary: cached.summary });
-    return;
-  }
-
-  const product = await prisma.product.findUnique({
-    where: { slug },
-    include: { category: true, brand: true },
-  });
-
-  if (!product) {
-    res.status(404).json({ success: false, message: 'Product not found' });
-    return;
-  }
-
-  const systemPrompt = 'You are Core, a helpful shopping assistant. Reply with only a concise, honest, engaging 2-3 sentence product summary. Do not invent specifications or prices. Do not use markdown.';
-  const userMessage =
-    `Write a short 2-3 sentence summary of this product for a shopper:\n` +
-    `Name: ${product.name}\nCategory: ${product.category?.name || 'N/A'}\nBrand: ${product.brand?.name || 'N/A'}\n` +
-    `Price: $${product.price}\nTags: ${(product.tags || []).join(', ')}\n` +
-    `Description: ${(product.description || '').slice(0, 400)}`;
-
-  const summary = await chatWithHF(systemPrompt, userMessage);
-  if (!summary) {
-    res.status(502).json({ success: false, message: 'AI summary is unavailable right now. Please try again.' });
-    return;
-  }
-
-  summaryCache.set(slug, { summary, at: Date.now() });
-  apiResponse(res, { summary });
 });
 
 router.get('/faq', (_req: Request, res: Response) => {

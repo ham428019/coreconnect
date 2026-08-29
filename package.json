@@ -6,6 +6,7 @@
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
     "build": "cd server && npm run build && cd ../client && npm run build",
+    "test": "cd server && npm test",
     "start": "cd server && npm start"
   },
   "devDependencies": {

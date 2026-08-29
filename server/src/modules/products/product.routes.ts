@@ -4,8 +4,53 @@ import { requireAuth, requireRole } from '../../middleware/requireAuth';
 import { apiResponse, apiError, getPagination, buildMeta } from '../../utils/helpers';
 import { UserRole } from '@prisma/client';
 import { generateSKU, slugify } from '../../utils/generateIds';
+import { deriveStructuredProductData } from './product-data.service';
 
 const router = Router();
+
+const stringList = (value: unknown): string[] => Array.isArray(value)
+  ? value.map(item => String(item).trim()).filter(Boolean)
+  : [];
+
+function productWriteData(body: Record<string, any>, partial = false) {
+  const has = (key: string) => !partial || Object.prototype.hasOwnProperty.call(body, key);
+  const tags = stringList(body.tags);
+  const specs = body.specs && typeof body.specs === 'object' ? body.specs : {};
+  const derived = deriveStructuredProductData({
+    tags,
+    specs,
+    shortDescription: body.shortDescription || null,
+  });
+  const keyFeatures = stringList(body.keyFeatures);
+  const compatibility = stringList(body.compatibility);
+  const useCases = stringList(body.useCases);
+  const colors = stringList(body.colors);
+  return {
+    name: body.name,
+    description: body.description,
+    shortDescription: has('shortDescription') ? body.shortDescription || null : undefined,
+    price: body.price,
+    comparePrice: has('comparePrice') ? body.comparePrice || null : undefined,
+    costPrice: has('costPrice') ? body.costPrice || null : undefined,
+    stockQty: body.stockQty === undefined ? undefined : Number(body.stockQty),
+    lowStockThreshold: body.lowStockThreshold === undefined ? undefined : Number(body.lowStockThreshold),
+    categoryId: body.categoryId,
+    brandId: has('brandId') ? body.brandId || null : undefined,
+    specs: has('specs') ? specs : undefined,
+    tags: has('tags') ? tags : undefined,
+    productType: has('productType') || has('tags') ? body.productType || derived.productType : undefined,
+    keyFeatures: has('keyFeatures') || has('specs') ? (keyFeatures.length ? keyFeatures : derived.keyFeatures) : undefined,
+    warranty: has('warranty') || has('specs') ? body.warranty || derived.warranty : undefined,
+    compatibility: has('compatibility') || has('specs') ? (compatibility.length ? compatibility : derived.compatibility) : undefined,
+    useCases: has('useCases') || has('tags') ? (useCases.length ? useCases : derived.useCases) : undefined,
+    colors: has('colors') || has('specs') ? (colors.length ? colors : derived.colors) : undefined,
+    dimensions: has('dimensions') ? body.dimensions || null : undefined,
+    weight: has('weight') ? (body.weight === null || body.weight === '' ? null : Number(body.weight)) : undefined,
+    isActive: typeof body.isActive === 'boolean' ? body.isActive : undefined,
+    isFeatured: typeof body.isFeatured === 'boolean' ? body.isFeatured : undefined,
+    isDigital: typeof body.isDigital === 'boolean' ? body.isDigital : undefined,
+  };
+}
 
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -98,6 +143,18 @@ router.get('/search', async (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
+router.get('/meta/options', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const [categories, brands] = await Promise.all([
+      prisma.category.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
+      prisma.brand.findMany({ orderBy: { name: 'asc' } }),
+    ]);
+    apiResponse(res, { categories, brands });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/:slug', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const product = await prisma.product.findUnique({
@@ -132,7 +189,7 @@ router.get('/:slug', async (req: Request, res: Response, next: NextFunction) => 
 
 router.post('/admin', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { name, description, shortDescription, price, comparePrice, costPrice, stockQty, categoryId, brandId, specs, tags, images } = req.body;
+    const { name, categoryId, brandId, images } = req.body;
 
     const slug = slugify(name);
     const category = await prisma.category.findUnique({ where: { id: categoryId } });
@@ -141,19 +198,9 @@ router.post('/admin', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN)
 
     const product = await prisma.product.create({
       data: {
-        name,
+        ...productWriteData(req.body),
         slug,
         sku,
-        description,
-        shortDescription,
-        price,
-        comparePrice,
-        costPrice,
-        stockQty: stockQty || 0,
-        categoryId,
-        brandId,
-        specs,
-        tags: tags || [],
         images: images ? {
           create: images.map((img: any, idx: number) => ({
             url: img.url,
@@ -195,9 +242,13 @@ router.patch('/admin/:id/stock', requireAuth, requireRole(UserRole.EMPLOYEE, Use
 
 router.patch('/admin/:id', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const data = productWriteData(req.body, true);
+    if (req.body.name) {
+      data.name = req.body.name;
+    }
     const product = await prisma.product.update({
       where: { id: req.params.id as string },
-      data: req.body,
+      data,
       include: { category: true, brand: true, images: true },
     });
     apiResponse(res, { product }, 'Product updated');

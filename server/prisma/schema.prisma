@@ -151,6 +151,12 @@ model Product {
   isDigital         Boolean  @default(false)
   tags              String[]
   specs             Json?
+  productType       String?
+  keyFeatures       String[] @default([])
+  warranty          String?
+  compatibility     String[] @default([])
+  useCases          String[] @default([])
+  colors            String[] @default([])
   metaTitle         String?
   metaDescription   String?
 

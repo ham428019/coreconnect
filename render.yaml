@@ -2,7 +2,7 @@ services:
   - type: web
     name: coreconnect-api
     env: node
-    buildCommand: cd server && npm install && npx prisma generate && npm run build && cd ../client && npm install && npm run build
+    buildCommand: cd server && npm install && npx prisma generate && npm test && npm run build && cd ../client && npm install && npm run build
     startCommand: cd server && npx prisma db push && npm start
     envVars:
       - key: NODE_ENV

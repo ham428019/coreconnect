@@ -3,10 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, Heart, User, Menu, X, Moon, Sun, LogOut, ClipboardList, MessageCircle, LayoutDashboard } from 'lucide-react';
 import { useAuthStore, useCartStore, useUIStore } from '../../stores';
 import { api } from '../../lib/api';
+import ConfirmDialog from '../ui/ConfirmDialog';
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuthStore();
   const itemCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0));
@@ -21,9 +24,18 @@ export default function Navbar() {
   };
 
   const handleLogout = async () => {
-    try { await api.post('/auth/logout'); } catch {}
-    logout();
-    navigate('/');
+    setLoggingOut(true);
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Clear local authentication even when an expired server session cannot be revoked.
+    } finally {
+      logout();
+      setLoggingOut(false);
+      setLogoutDialogOpen(false);
+      setMenuOpen(false);
+      navigate('/');
+    }
   };
 
   return (
@@ -36,7 +48,7 @@ export default function Navbar() {
             </button>
             <Link to="/" className="flex items-center gap-2">
               <img src="/cc-logo.png" alt="CoreConnect" className="h-20 w-20 object-contain" />
-              <span className="font-cursive text-2xl text-primary dark:text-white">CoreConnect</span>
+              <span className="font-display text-xl font-extrabold tracking-tight text-primary dark:text-white">CoreConnect</span>
             </Link>
           </div>
 
@@ -75,7 +87,7 @@ export default function Navbar() {
                 <Link to="/profile" className="p-2 hover:bg-bg dark:hover:bg-gray-800 rounded-btn transition-colors hidden sm:block">
                   <User size={20} />
                 </Link>
-                <button onClick={handleLogout} className="p-2 hover:bg-bg dark:hover:bg-gray-800 rounded-btn transition-colors hidden sm:block">
+                <button onClick={() => setLogoutDialogOpen(true)} className="p-2 hover:bg-bg dark:hover:bg-gray-800 rounded-btn transition-colors hidden sm:block" title="Logout" aria-label="Logout">
                   <LogOut size={18} />
                 </button>
               </>
@@ -114,8 +126,27 @@ export default function Navbar() {
               <Link to="/register" onClick={() => setMenuOpen(false)} className="btn-primary text-sm block text-center">Sign Up</Link>
             </div>
           )}
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={() => setLogoutDialogOpen(true)}
+              className="flex w-full items-center gap-2 border-t border-border pt-4 text-sm font-semibold text-text-muted transition-colors hover:text-accent dark:border-slate-700 dark:text-slate-300"
+            >
+              <LogOut size={17} /> Logout
+            </button>
+          )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={logoutDialogOpen}
+        title="Log out of CoreConnect?"
+        description="Are you sure you want to log out? You can sign back in at any time."
+        confirmLabel="Logout"
+        loading={loggingOut}
+        onCancel={() => setLogoutDialogOpen(false)}
+        onConfirm={handleLogout}
+      />
     </nav>
   );
 }

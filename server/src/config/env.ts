@@ -25,5 +25,5 @@ export const env = {
   UPLOAD_DIR: process.env.UPLOAD_DIR || './uploads',
   MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10),
   HF_API_KEY: process.env.HF_API_KEY || '',
-  HF_MODEL: process.env.HF_MODEL || 'Qwen/Qwen3-4B-Instruct-2507',
+  HF_MODEL: process.env.HF_MODEL || 'openai/gpt-oss-20b:groq',
 };

@@ -7,37 +7,37 @@
   body {
     @apply bg-bg text-text font-sans antialiased;
     background-image:
-      radial-gradient(circle at 15% 20%, rgba(166, 124, 61, 0.05), transparent 45%),
-      radial-gradient(circle at 85% 75%, rgba(166, 124, 61, 0.05), transparent 45%),
-      radial-gradient(circle, rgba(166, 124, 61, 0.18) 1px, transparent 1.5px);
+      radial-gradient(circle at 15% 20%, rgba(59, 111, 159, 0.06), transparent 45%),
+      radial-gradient(circle at 85% 75%, rgba(96, 145, 186, 0.05), transparent 45%),
+      radial-gradient(circle, rgba(59, 111, 159, 0.12) 1px, transparent 1.5px);
     background-size: 100% 100%, 100% 100%, 24px 24px;
     background-attachment: fixed;
   }
   .dark body {
     @apply bg-primary text-white;
     background-image:
-      radial-gradient(circle, rgba(231, 220, 199, 0.14) 1px, transparent 1.5px);
+      radial-gradient(circle, rgba(151, 190, 224, 0.12) 1px, transparent 1.5px);
     background-size: 24px 24px;
     background-attachment: fixed;
   }
   h1, h2, h3, h4, h5, h6 { @apply font-display tracking-wide; }
   .checkout-bg {
-    background-color: #FAF6EE;
+    background-color: #F4F7FB;
     background-image:
-      radial-gradient(circle at 12% 15%, rgba(166, 124, 61, 0.10), transparent 45%),
-      radial-gradient(circle at 88% 80%, rgba(62, 44, 28, 0.08), transparent 45%),
-      linear-gradient(rgba(166, 124, 61, 0.06) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(166, 124, 61, 0.06) 1px, transparent 1px);
+      radial-gradient(circle at 12% 15%, rgba(59, 111, 159, 0.10), transparent 45%),
+      radial-gradient(circle at 88% 80%, rgba(16, 42, 67, 0.07), transparent 45%),
+      linear-gradient(rgba(59, 111, 159, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 111, 159, 0.06) 1px, transparent 1px);
     background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
     background-attachment: fixed;
   }
   .dark .checkout-bg {
-    background-color: #221A10;
+    background-color: #0B1F33;
     background-image:
-      radial-gradient(circle at 12% 15%, rgba(166, 124, 61, 0.14), transparent 45%),
-      radial-gradient(circle at 88% 80%, rgba(166, 124, 61, 0.08), transparent 45%),
-      linear-gradient(rgba(231, 220, 199, 0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(231, 220, 199, 0.05) 1px, transparent 1px);
+      radial-gradient(circle at 12% 15%, rgba(59, 111, 159, 0.18), transparent 45%),
+      radial-gradient(circle at 88% 80%, rgba(59, 111, 159, 0.10), transparent 45%),
+      linear-gradient(rgba(151, 190, 224, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(151, 190, 224, 0.05) 1px, transparent 1px);
     background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
     background-attachment: fixed;
   }
@@ -66,7 +66,7 @@
     content: '';
     position: absolute;
     inset: 4px;
-    border: 1px solid rgba(166, 124, 61, 0.35);
+    border: 1px solid rgba(59, 111, 159, 0.30);
     border-radius: 8px;
     pointer-events: none;
   }
@@ -93,10 +93,10 @@
     content: '';
     height: 1px;
     width: 3rem;
-    background: linear-gradient(90deg, transparent, rgba(166, 124, 61, 0.6));
+    background: linear-gradient(90deg, transparent, rgba(59, 111, 159, 0.55));
   }
   .ornament::after {
-    background: linear-gradient(90deg, rgba(166, 124, 61, 0.6), transparent);
+    background: linear-gradient(90deg, rgba(59, 111, 159, 0.55), transparent);
   }
 }
 

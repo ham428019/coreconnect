@@ -3,13 +3,44 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit, Trash2, Search, ImagePlus, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, formatCurrency } from '../../lib/api';
-import type { Product } from '../../types';
+import type { Brand, Category, Product } from '../../types';
 import PageHeader from '../../components/layout/PageHeader';
+
+const emptyForm = {
+  name: '',
+  shortDescription: '',
+  price: '',
+  stockQty: '',
+  description: '',
+  categoryId: '',
+  brandId: '',
+  productType: '',
+  tags: '',
+  keyFeatures: '',
+  warranty: '',
+  compatibility: '',
+  useCases: '',
+  colors: '',
+  dimensions: '',
+  weight: '',
+  specs: '',
+};
+
+const commaList = (value: string) => value.split(',').map(item => item.trim()).filter(Boolean);
+
+const parseSpecs = (value: string): Record<string, string> => Object.fromEntries(
+  value.split('\n').map(line => {
+    const separator = line.indexOf(':');
+    return separator > 0
+      ? [line.slice(0, separator).trim(), line.slice(separator + 1).trim()]
+      : ['', ''];
+  }).filter(([key, val]) => key && val),
+);
 
 export default function AdminProducts() {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [form, setForm] = useState({ name: '', price: '', stockQty: '', description: '', categoryId: '', tags: '' });
+  const [form, setForm] = useState(emptyForm);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const queryClient = useQueryClient();
@@ -19,9 +50,9 @@ export default function AdminProducts() {
     queryFn: () => api.get<{ products: Product[] }>('/products?limit=1000'),
   });
 
-  const { data: catData } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api.get<{ categories: any[] }>('/categories/all'),
+  const { data: optionData } = useQuery({
+    queryKey: ['product-options'],
+    queryFn: () => api.get<{ categories: Category[]; brands: Brand[] }>('/products/meta/options'),
   });
 
   const createProduct = useMutation({
@@ -40,11 +71,22 @@ export default function AdminProducts() {
       }
       return api.post('/products/admin', {
         name: form.name,
+        shortDescription: form.shortDescription,
         price: parseFloat(form.price),
         stockQty: parseInt(form.stockQty),
         description: form.description,
         categoryId: form.categoryId,
-        tags: form.tags.split(',').map(t => t.trim()),
+        brandId: form.brandId || null,
+        productType: form.productType,
+        tags: commaList(form.tags),
+        keyFeatures: commaList(form.keyFeatures),
+        warranty: form.warranty,
+        compatibility: commaList(form.compatibility),
+        useCases: commaList(form.useCases),
+        colors: commaList(form.colors),
+        dimensions: form.dimensions,
+        weight: form.weight ? parseFloat(form.weight) : null,
+        specs: parseSpecs(form.specs),
         images: uploaded.length > 0 ? uploaded.map(u => ({ url: u.url, altText: form.name })) : undefined,
       });
     },
@@ -55,11 +97,22 @@ export default function AdminProducts() {
   const updateProduct = useMutation({
     mutationFn: () => api.patch(`/products/admin/${editingProduct?.id}`, {
       name: form.name,
+      shortDescription: form.shortDescription,
       price: parseFloat(form.price),
       stockQty: parseInt(form.stockQty),
       description: form.description,
       categoryId: form.categoryId,
-      tags: form.tags.split(',').map(t => t.trim()),
+      brandId: form.brandId || null,
+      productType: form.productType,
+      tags: commaList(form.tags),
+      keyFeatures: commaList(form.keyFeatures),
+      warranty: form.warranty,
+      compatibility: commaList(form.compatibility),
+      useCases: commaList(form.useCases),
+      colors: commaList(form.colors),
+      dimensions: form.dimensions,
+      weight: form.weight ? parseFloat(form.weight) : null,
+      specs: parseSpecs(form.specs),
     }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin', 'products'] }); setShowForm(false); setEditingProduct(null); toast.success('Product updated'); },
     onError: (err: Error) => toast.error(err.message),
@@ -75,18 +128,30 @@ export default function AdminProducts() {
     setEditingProduct(product);
     setForm({
       name: product.name,
+      shortDescription: product.shortDescription || '',
       price: String(product.price),
       stockQty: String(product.stockQty),
       description: product.description || '',
       categoryId: product.category?.id || '',
+      brandId: product.brand?.id || '',
+      productType: product.productType || '',
       tags: (product.tags || []).join(', '),
+      keyFeatures: (product.keyFeatures || []).join(', '),
+      warranty: product.warranty || '',
+      compatibility: (product.compatibility || []).join(', '),
+      useCases: (product.useCases || []).join(', '),
+      colors: (product.colors || []).join(', '),
+      dimensions: product.dimensions || '',
+      weight: product.weight != null ? String(product.weight) : '',
+      specs: Object.entries(product.specs || {}).map(([key, value]) => `${key}: ${value}`).join('\n'),
     });
     setImageFiles([]);
     setShowForm(true);
   };
 
   const products = data?.data?.products || [];
-  const categories = catData?.data?.categories || [];
+  const categories = optionData?.data?.categories || [];
+  const brands = optionData?.data?.brands || [];
 
   return (
     <div>
@@ -94,7 +159,7 @@ export default function AdminProducts() {
         title={`Products (${data?.meta?.total ?? products.length})`}
         subtitle="Manage the product catalog"
         actions={
-          <button onClick={() => { setEditingProduct(null); setShowForm(!showForm); }} className="btn-primary text-sm">
+          <button onClick={() => { setEditingProduct(null); setForm(emptyForm); setShowForm(!showForm); }} className="btn-primary text-sm">
             <Plus size={16} /> Add Product
           </button>
         }
@@ -103,18 +168,32 @@ export default function AdminProducts() {
       {showForm && (
         <div className="card mb-6">
           <h3 className="font-semibold mb-4">{editingProduct ? 'Edit Product' : 'New Product'}</h3>
-          <div className="space-y-3">
-            <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Product Name" className="input !py-2" />
-            <div className="grid grid-cols-2 gap-3">
-              <input value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} placeholder="Price" type="number" className="input !py-2" />
-              <input value={form.stockQty} onChange={e => setForm({ ...form, stockQty: e.target.value })} placeholder="Stock Qty" type="number" className="input !py-2" />
+          <div className="space-y-4">
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm font-medium">Product name<input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Product name" className="input mt-1 !py-2" /></label>
+              <label className="text-sm font-medium">Product type<input value={form.productType} onChange={e => setForm({ ...form, productType: e.target.value })} placeholder="e.g. Gaming chair" className="input mt-1 !py-2" /></label>
             </div>
-            <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Description" className="input !py-2" rows={3} />
-            <select value={form.categoryId} onChange={e => setForm({ ...form, categoryId: e.target.value })} className="input !py-2">
-              <option value="">Select Category</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <input value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} placeholder="Tags (comma-separated)" className="input !py-2" />
+            <label className="block text-sm font-medium">Short description<input value={form.shortDescription} maxLength={255} onChange={e => setForm({ ...form, shortDescription: e.target.value })} placeholder="Concise catalog summary" className="input mt-1 !py-2" /></label>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <label className="text-sm font-medium">Price<input value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} placeholder="0.00" type="number" min="0" step="0.01" className="input mt-1 !py-2" /></label>
+              <label className="text-sm font-medium">Stock quantity<input value={form.stockQty} onChange={e => setForm({ ...form, stockQty: e.target.value })} placeholder="0" type="number" min="0" className="input mt-1 !py-2" /></label>
+              <label className="text-sm font-medium">Weight (kg)<input value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} placeholder="Optional" type="number" min="0" step="0.01" className="input mt-1 !py-2" /></label>
+              <label className="text-sm font-medium">Dimensions<input value={form.dimensions} onChange={e => setForm({ ...form, dimensions: e.target.value })} placeholder="Optional" className="input mt-1 !py-2" /></label>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm font-medium">Category<select value={form.categoryId} onChange={e => setForm({ ...form, categoryId: e.target.value })} className="input mt-1 !py-2"><option value="">Select category</option>{categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+              <label className="text-sm font-medium">Brand<select value={form.brandId} onChange={e => setForm({ ...form, brandId: e.target.value })} className="input mt-1 !py-2"><option value="">No brand</option>{brands.map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
+            </div>
+            <label className="block text-sm font-medium">Description<textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Accurate product description" className="input mt-1 !py-2" rows={4} /></label>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-sm font-medium">Warranty<input value={form.warranty} onChange={e => setForm({ ...form, warranty: e.target.value })} placeholder="Only if verified" className="input mt-1 !py-2" /></label>
+              <label className="text-sm font-medium">Colors / variants<input value={form.colors} onChange={e => setForm({ ...form, colors: e.target.value })} placeholder="Comma-separated" className="input mt-1 !py-2" /></label>
+              <label className="text-sm font-medium">Compatibility<input value={form.compatibility} onChange={e => setForm({ ...form, compatibility: e.target.value })} placeholder="Comma-separated" className="input mt-1 !py-2" /></label>
+              <label className="text-sm font-medium">Use cases<input value={form.useCases} onChange={e => setForm({ ...form, useCases: e.target.value })} placeholder="Gaming, Office, Programming" className="input mt-1 !py-2" /></label>
+            </div>
+            <label className="block text-sm font-medium">Key features<input value={form.keyFeatures} onChange={e => setForm({ ...form, keyFeatures: e.target.value })} placeholder="Comma-separated verified features" className="input mt-1 !py-2" /></label>
+            <label className="block text-sm font-medium">Tags<input value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} placeholder="Comma-separated search tags" className="input mt-1 !py-2" /></label>
+            <label className="block text-sm font-medium">Specifications <span className="font-normal text-text-muted">(one “name: value” pair per line)</span><textarea value={form.specs} onChange={e => setForm({ ...form, specs: e.target.value })} placeholder={'foam: Cold-cure\nwarranty: 5 years'} className="input mt-1 font-mono text-sm !py-2" rows={5} /></label>
             <div>
               <label className="flex items-center justify-center gap-2 border-2 border-dashed border-border dark:border-gray-600 rounded-btn py-4 cursor-pointer text-sm text-text-muted hover:border-accent hover:text-accent transition-colors">
                 <ImagePlus size={18} />

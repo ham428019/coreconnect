@@ -19,6 +19,7 @@ import analyticsRoutes from './modules/analytics/analytics.routes';
 import aiRoutes from './modules/ai/ai.routes';
 import couponRoutes from './modules/coupons/coupon.routes';
 import uploadRoutes from './modules/uploads/upload.routes';
+import { backfillStructuredProductData } from './modules/products/product-data.service';
 
 const app = express();
 
@@ -67,9 +68,19 @@ app.use((_req, _res, next) => {
 
 app.use(errorHandler);
 
-app.listen(env.PORT, () => {
-  console.log(`CoreConnect API running on port ${env.PORT}`);
-  console.log(`Environment: ${env.NODE_ENV}`);
-});
+async function startServer() {
+  try {
+    await backfillStructuredProductData();
+  } catch (error) {
+    console.error('[catalog] Could not backfill structured product fields:', error);
+  }
+
+  app.listen(env.PORT, () => {
+    console.log(`CoreConnect API running on port ${env.PORT}`);
+    console.log(`Environment: ${env.NODE_ENV}`);
+  });
+}
+
+void startServer();
 
 export default app;
