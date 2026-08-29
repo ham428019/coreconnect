@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CatalogContext, CatalogProduct, resolveCatalogIntent } from './catalog-intelligence';
+import { buildCatalogSummary, CatalogContext, CatalogProduct, resolveCatalogIntent } from './catalog-intelligence';
 
 const product = (data: Partial<CatalogProduct> & Pick<CatalogProduct, 'name' | 'slug' | 'price' | 'stockQty' | 'tags' | 'specs' | 'description' | 'brand' | 'category'>): CatalogProduct => ({
   lowStockThreshold: 10,
@@ -65,7 +65,7 @@ const emptyContext = (): CatalogContext => ({ lastProduct: null, lastProducts: [
 
 test('answers a named-product warranty question from structured data', () => {
   const answer = resolveCatalogIntent(catalog, 'What is the warranty period of Secretlab TITAN Evo 2022?', emptyContext());
-  assert.match(answer?.reply || '', /5 years/i);
+  assert.match(answer?.reply || '', /5-year/i);
   assert.doesNotMatch(answer?.reply || '', /no matching/i);
 });
 
@@ -95,6 +95,12 @@ test('filters by product type, features, use case, price, and stock together', (
   assert.match(answer?.reply || '', /Superlight 2/);
   assert.match(answer?.reply || '', /DeathAdder V3 Pro/);
   assert.doesNotMatch(answer?.reply || '', /Keychron/);
+});
+
+test('finds wireless gaming mice without requiring a price filter', () => {
+  const answer = resolveCatalogIntent(catalog, 'Show me wireless gaming mice.', emptyContext());
+  assert.match(answer?.reply || '', /Superlight 2/);
+  assert.match(answer?.reply || '', /DeathAdder V3 Pro/);
 });
 
 test('counts gaming products exactly without treating many as a keyword', () => {
@@ -132,7 +138,7 @@ test('uses the last product for follow-up pronouns', () => {
   const context = { lastProduct: first?.lastProduct || null, lastProducts: first?.lastProducts || [] };
   const warranty = resolveCatalogIntent(catalog, 'What is its warranty?', context);
   const stock = resolveCatalogIntent(catalog, 'Is it in stock?', context);
-  assert.match(warranty?.reply || '', /5 years/i);
+  assert.match(warranty?.reply || '', /5-year/i);
   assert.match(stock?.reply || '', /23 units/i);
 });
 
@@ -150,4 +156,13 @@ test('handles the Recommendations quick action using catalog products', () => {
   const answer = resolveCatalogIntent(catalog, 'Recommendations', emptyContext());
   assert.match(answer?.reply || '', /current CoreConnect catalog/i);
   assert.ok((answer?.links?.length || 0) > 0);
+});
+
+test('builds a grounded fallback summary from catalog facts only', () => {
+  const summary = buildCatalogSummary(catalog[0]);
+  assert.match(summary, /Cold-cure foam/i);
+  assert.match(summary, /4-way L-ADAPT lumbar/i);
+  assert.match(summary, /CloudSwap 4D armrests/i);
+  assert.match(summary, /5-year warranty/i);
+  assert.doesNotMatch(summary, /leather|recline|weight capacity/i);
 });

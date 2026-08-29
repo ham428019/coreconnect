@@ -37,6 +37,29 @@ export interface CatalogResolution {
   lastProducts?: CatalogProduct[];
 }
 
+export function buildCatalogSummary(product: {
+  name: string;
+  specs: unknown;
+  keyFeatures: string[];
+  shortDescription: string | null;
+  description: string;
+  warranty: string | null;
+}): string {
+  const specs = Object.entries((product.specs || {}) as Record<string, unknown>);
+  const featureSpecs = specs
+    .filter(([key]) => !/warranty|guarantee/i.test(key))
+    .slice(0, 4)
+    .map(([key, value]) => `${value} ${key.replace(/[-_]/g, ' ')}`);
+  const features = featureSpecs.length ? featureSpecs : product.keyFeatures.slice(0, 4);
+  const base = features.length
+    ? `${product.name} features ${features.join(', ')}.`
+    : `${product.name}: ${product.shortDescription || product.description.split(/(?<=[.!?])\s/)[0]}`;
+  const warranty = product.warranty || specs.find(([key]) => /warranty|guarantee/i.test(key))?.[1];
+  if (!warranty) return base;
+  const warrantyLabel = String(warranty).replace(/^(\d+)\s+years?$/i, '$1-year');
+  return `${base} It includes a ${warrantyLabel} warranty.`;
+}
+
 interface TermGroup {
   words: string[];
   terms: string[];
@@ -110,7 +133,7 @@ const GENERIC_NAME_WORDS = new Set([
 const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
 
 function normalize(value: string): string {
-  return value.toLowerCase().replace(/[-_/]+/g, ' ').replace(/[^a-z0-9.%+ ]/g, ' ').replace(/\s+/g, ' ').trim();
+  return value.toLowerCase().replace(/[-_/]+/g, ' ').replace(/[^a-z0-9.%+ ]/g, ' ').replace(/\.(?!\d)/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 function tokens(value: string): string[] {
@@ -223,8 +246,9 @@ function productFacts(product: CatalogProduct, message: string): CatalogResoluti
 
   if (/\b(warranty|guarantee)\b/.test(lower)) {
     const warranty = product.warranty || specValue(product, ['warranty', 'guarantee'])?.value;
+    const warrantyLabel = warranty?.replace(/^(\d+)\s+years?$/i, '$1-year');
     return result(warranty
-      ? `The ${product.name} has a ${warranty.replace(/-year/i, '-year')} warranty.`
+      ? `The ${product.name} has a ${warrantyLabel} warranty.`
       : `The warranty information for ${product.name} is not available.`);
   }
   if (/\b(price|cost|how much)\b/.test(lower)) {
@@ -419,11 +443,11 @@ function catalogSearch(catalog: CatalogProduct[], message: string): CatalogResol
   ].filter((value): value is string => Boolean(value));
 
   if (isCount) {
-    const subject = labels.length ? labels.join(', ') : 'matching products';
+    const criteria = labels.length ? ` matching ${labels.join(' and ')}` : '';
     return {
       reply: matches.length
-        ? `There ${matches.length === 1 ? 'is' : 'are'} ${matches.length} ${subject} ${matches.length === 1 ? 'product' : 'products'} in the CoreConnect catalog.`
-        : `There are 0 ${subject} products in the CoreConnect catalog.`,
+        ? `There ${matches.length === 1 ? 'is' : 'are'} ${matches.length} ${matches.length === 1 ? 'product' : 'products'} in the CoreConnect catalog${criteria}.`
+        : `There are 0 products in the CoreConnect catalog${criteria}.`,
       stats: [{ label: 'Exact catalog count', value: String(matches.length) }],
       lastProduct: matches[0] || null,
       lastProducts: matches.slice(0, 5),

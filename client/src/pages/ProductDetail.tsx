@@ -13,6 +13,7 @@ export default function ProductDetail() {
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [summarySource, setSummarySource] = useState<'ai' | 'catalog' | null>(null);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const queryClient = useQueryClient();
@@ -48,8 +49,13 @@ export default function ProductDetail() {
     setSummaryLoading(true);
     setSummaryError(null);
     try {
-      const res = await api.post<{ summary: string }>('/ai/summarize', { slug: product.slug });
+      const res = await api.post<{ summary: string; source: 'ai' | 'catalog'; warning?: string }>('/ai/summarize', { slug: product.slug });
       setAiSummary(res.data.summary);
+      setSummarySource(res.data.source);
+      if (res.data.warning) {
+        setSummaryError(res.data.warning);
+        toast.warning(res.data.warning);
+      }
     } catch (err: any) {
       const message = err.message || 'AI summary is unavailable right now. Please try again later.';
       setSummaryError(message);
@@ -276,7 +282,7 @@ export default function ProductDetail() {
         <div className="card">
           {aiSummary && (
             <div className="mb-4 p-3 rounded-lg bg-accent/10 border border-accent/30 text-sm">
-              <p className="font-semibold text-accent mb-1">AI Summary</p>
+              <p className="font-semibold text-accent mb-1">{summarySource === 'catalog' ? 'Catalog Summary' : 'AI Summary'}</p>
               <p className="text-text dark:text-gray-200 leading-relaxed">{aiSummary}</p>
             </div>
           )}

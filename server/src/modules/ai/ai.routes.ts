@@ -5,7 +5,7 @@ import { AuthPayload } from '../../middleware/requireAuth';
 import { apiResponse } from '../../utils/helpers';
 import { chatWithHF } from './ai.service';
 import { UserRole } from '@prisma/client';
-import { CatalogProduct, resolveCatalogIntent } from './catalog-intelligence';
+import { buildCatalogSummary, CatalogProduct, resolveCatalogIntent } from './catalog-intelligence';
 
 const router = Router();
 
@@ -1034,8 +1034,11 @@ router.post('/summarize', async (req: Request, res: Response) => {
     const systemPrompt = 'You are Core, a factual shopping assistant. Write only one or two concise sentences. Use only facts explicitly supplied in the catalog record. Do not infer, add, embellish, or guess any specification. Omit unavailable fields. Do not use markdown.';
     const summaryResult = await chatWithHF(systemPrompt, `Summarize this exact catalog record for a shopper:\n${sourceFacts}`);
     if (!summaryResult.ok) {
-      const status = summaryResult.code === 'not_configured' ? 503 : summaryResult.code === 'timeout' ? 504 : 502;
-      res.status(status).json({ success: false, message: summaryResult.message, code: summaryResult.code });
+      apiResponse(res, {
+        summary: buildCatalogSummary(product),
+        source: 'catalog',
+        warning: summaryResult.message,
+      });
       return;
     }
 
@@ -1045,12 +1048,16 @@ router.post('/summarize', async (req: Request, res: Response) => {
       .find(number => !sourceNumbers.has(number));
     if (unsupportedNumber) {
       console.error(`[ai] Rejected ungrounded summary for ${slug}: unsupported numeric fact ${unsupportedNumber}.`);
-      res.status(502).json({ success: false, message: 'The AI response could not be verified against this product. Please try again.' });
+      apiResponse(res, {
+        summary: buildCatalogSummary(product),
+        source: 'catalog',
+        warning: 'The AI response could not be verified, so a catalog-grounded summary is shown instead.',
+      });
       return;
     }
 
     summaryCache.set(slug, { summary: summaryResult.content, at: Date.now() });
-    apiResponse(res, { summary: summaryResult.content });
+    apiResponse(res, { summary: summaryResult.content, source: 'ai' });
   } catch (error) {
     console.error('[ai] Product summary failed:', error);
     res.status(500).json({ success: false, message: 'The product summary could not be generated right now. Please try again.' });
