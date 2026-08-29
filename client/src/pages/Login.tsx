@@ -18,11 +18,13 @@ type FormData = z.infer<typeof schema>;
 export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { setUser } = useAuthStore();
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (data: FormData) => {
+    setLoginError(null);
     setLoading(true);
     try {
       const res: any = await api.post('/auth/login', data);
@@ -30,7 +32,9 @@ export default function Login() {
       toast.success('Welcome back!');
       navigate('/');
     } catch (err: any) {
-      toast.error(err.message);
+      const message = err instanceof Error ? err.message : 'Unable to sign in. Please try again.';
+      setLoginError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -62,6 +66,12 @@ export default function Login() {
             </div>
             {errors.password && <p className="text-danger text-xs mt-1">{errors.password.message}</p>}
           </div>
+
+          {loginError && (
+            <p role="alert" aria-live="polite" className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger">
+              {loginError}
+            </p>
+          )}
 
           <button type="submit" disabled={loading} className="btn-primary w-full">
             <LogIn size={18} /> {loading ? 'Signing in...' : 'Sign In'}

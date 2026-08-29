@@ -23,7 +23,7 @@ router.post('/register', validateRequest(registerSchema), async (req: Request, r
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    apiResponse(res, result, 'Registration successful');
+    apiResponse(res, { user: result.user }, 'Registration successful');
   } catch (error) {
     next(error);
   }
@@ -44,7 +44,7 @@ router.post('/login', validateRequest(loginSchema), async (req: Request, res: Re
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    apiResponse(res, result, 'Login successful');
+    apiResponse(res, { user: result.user }, 'Login successful');
   } catch (error) {
     next(error);
   }
@@ -70,7 +70,7 @@ router.post('/refresh', async (req: Request, res: Response, next: NextFunction) 
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
-    apiResponse(res, { accessToken: result.accessToken }, 'Token refreshed');
+    apiResponse(res, null, 'Token refreshed');
   } catch (error) {
     next(error);
   }

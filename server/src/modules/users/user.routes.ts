@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from '../../middleware/requireAuth';
 import { apiResponse, apiError, getPagination, buildMeta } from '../../utils/helpers';
 import { UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { sanitizeUser } from '../../utils/sanitizeUser';
 
 const router = Router();
 
@@ -14,8 +15,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response, next: NextFun
       include: { addresses: true },
     });
     if (!user) return apiError(res, 404, 'User not found');
-    const { passwordHash: _, ...safe } = user;
-    apiResponse(res, { user: safe });
+    apiResponse(res, { user: sanitizeUser(user) });
   } catch (error) {
     next(error);
   }
@@ -28,8 +28,7 @@ router.patch('/me', requireAuth, async (req: Request, res: Response, next: NextF
       where: { id: req.user!.userId },
       data: { firstName, lastName, phone, avatarUrl },
     });
-    const { passwordHash: _, ...safe } = user;
-    apiResponse(res, { user: safe }, 'Profile updated');
+    apiResponse(res, { user: sanitizeUser(user) }, 'Profile updated');
   } catch (error) {
     next(error);
   }
@@ -141,8 +140,7 @@ router.patch('/admin/users/:id/role', requireAuth, requireRole(UserRole.ADMIN), 
       where: { id: req.params.id as string },
       data: { role },
     });
-    const { passwordHash: _, ...safe } = user;
-    apiResponse(res, { user: safe }, 'Role updated');
+    apiResponse(res, { user: sanitizeUser(user) }, 'Role updated');
   } catch (error) {
     next(error);
   }

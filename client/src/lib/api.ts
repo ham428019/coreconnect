@@ -3,6 +3,7 @@ import type { ApiResponse } from '../types';
 const BASE_URL = '/api/v1';
 
 let refreshing: Promise<boolean> | null = null;
+const AUTH_REQUESTS_WITHOUT_REFRESH = new Set(['/auth/login', '/auth/register', '/auth/refresh']);
 
 async function refreshSession(): Promise<boolean> {
   if (!refreshing) {
@@ -39,7 +40,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}, retried =
     ...options,
   });
 
-  if (res.status === 401 && !retried) {
+  if (res.status === 401 && !retried && !AUTH_REQUESTS_WITHOUT_REFRESH.has(endpoint)) {
     const ok = await refreshSession();
     if (ok) return request<T>(endpoint, options, true);
     forceLogin();

@@ -4,8 +4,18 @@ import crypto from 'crypto';
 import { prisma } from '../../config/database';
 import { env } from '../../config/env';
 import { AuthPayload } from '../../middleware/requireAuth';
-import { UserRole } from '@prisma/client';
 import { AppError } from '../../middleware/errorHandler';
+import { sanitizeUser } from '../../utils/sanitizeUser';
+import {
+  INVALID_CREDENTIALS_MESSAGE,
+  LOGIN_LOCKOUT_MESSAGE,
+  evaluateLoginAttempt,
+  isLoginLocked,
+} from './login-security';
+
+// Comparing against a real bcrypt hash for unknown emails makes that failure path
+// less distinguishable from a wrong password for an existing account.
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync(crypto.randomBytes(32).toString('hex'), 12);
 
 function signAccessToken(payload: AuthPayload): string {
   return jwt.sign(payload, env.JWT_ACCESS_SECRET, { expiresIn: env.JWT_ACCESS_EXPIRY } as any);
@@ -53,18 +63,58 @@ export async function register(data: {
     },
   });
 
-  const { passwordHash: _, ...userSafe } = user;
-  return { user: userSafe, accessToken, refreshToken };
+  return { user: sanitizeUser(user), accessToken, refreshToken };
 }
 
 export async function login(email: string, password: string) {
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) throw new AppError(401, 'Invalid email or password');
+  const candidate = await prisma.user.findUnique({ where: { email } });
+  if (!candidate) {
+    await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
+    throw new AppError(401, INVALID_CREDENTIALS_MESSAGE);
+  }
 
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) throw new AppError(401, 'Invalid email or password');
+  const attempt = await prisma.$transaction(async (tx) => {
+    // Serialize attempts for this account so simultaneous requests cannot race
+    // past the five-attempt limit.
+    await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "users" WHERE "id" = ${candidate.id} FOR UPDATE
+    `;
 
-  if (!user.isActive) throw new AppError(403, 'Account is deactivated');
+    const user = await tx.user.findUnique({ where: { id: candidate.id } });
+    if (!user) return { status: 'invalid' as const };
+
+    const now = new Date();
+    if (isLoginLocked(user, now)) return { status: 'locked' as const };
+
+    const passwordValid = await bcrypt.compare(password, user.passwordHash);
+    if (passwordValid && !user.isActive) {
+      return { status: 'deactivated' as const };
+    }
+
+    const decision = evaluateLoginAttempt(user, passwordValid, now);
+    const updatedUser = await tx.user.update({
+      where: { id: user.id },
+      data: decision.nextState,
+    });
+
+    if (decision.status === 'authenticated') {
+      return { status: 'authenticated' as const, user: updatedUser };
+    }
+
+    return { status: decision.status };
+  }, { timeout: 10_000 });
+
+  if (attempt.status === 'locked') {
+    throw new AppError(429, LOGIN_LOCKOUT_MESSAGE);
+  }
+  if (attempt.status === 'deactivated') {
+    throw new AppError(403, 'Account is deactivated');
+  }
+  if (attempt.status !== 'authenticated') {
+    throw new AppError(401, INVALID_CREDENTIALS_MESSAGE);
+  }
+
+  const user = attempt.user;
 
   const payload: AuthPayload = { userId: user.id, email: user.email, role: user.role };
   const accessToken = signAccessToken(payload);
@@ -78,8 +128,7 @@ export async function login(email: string, password: string) {
     },
   });
 
-  const { passwordHash: _, ...userSafe } = user;
-  return { user: userSafe, accessToken, refreshToken };
+  return { user: sanitizeUser(user), accessToken, refreshToken };
 }
 
 export async function refresh(userToken: string) {
@@ -123,6 +172,5 @@ export async function logout(userId: string, token?: string) {
 export async function getMe(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new AppError(404, 'User not found');
-  const { passwordHash: _, ...userSafe } = user;
-  return userSafe;
+  return sanitizeUser(user);
 }
