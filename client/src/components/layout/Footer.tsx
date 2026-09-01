@@ -38,7 +38,7 @@ export default function Footer() {
         <div className="max-w-xl mx-auto mb-12">
           <h4 className="font-semibold text-center mb-1">Join our newsletter</h4>
           <p className="text-sm text-white/60 text-center mb-4">Get exclusive deals and early access to new arrivals.</p>
-          <form onSubmit={subscribe} className="flex gap-2">
+          <form onSubmit={subscribe} className="flex flex-col sm:flex-row gap-2">
             <input
               type="email"
               value={email}

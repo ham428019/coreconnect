@@ -103,12 +103,12 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="card mt-6">
+      <div className="card mt-6 overflow-x-auto">
         <h3 className="font-semibold mb-4">Recent Orders</h3>
         {(analytics?.recentOrders || []).length === 0 ? (
           <p className="text-sm text-text-muted">No orders yet</p>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[500px]">
             <thead>
               <tr className="border-b border-border text-text-muted">
                 <th className="text-left py-2 font-medium">Order #</th>

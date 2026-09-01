@@ -166,15 +166,15 @@ export default function AdminProducts() {
       />
 
       {showForm && (
-        <div className="card mb-6">
+        <div className="card mb-6 overflow-x-auto min-w-0">
           <h3 className="font-semibold mb-4">{editingProduct ? 'Edit Product' : 'New Product'}</h3>
-          <div className="space-y-4">
+          <div className="space-y-4 min-w-[600px]">
             <div className="grid gap-3 md:grid-cols-2">
               <label className="text-sm font-medium">Product name<input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Product name" className="input mt-1 !py-2" /></label>
               <label className="text-sm font-medium">Product type<input value={form.productType} onChange={e => setForm({ ...form, productType: e.target.value })} placeholder="e.g. Gaming chair" className="input mt-1 !py-2" /></label>
             </div>
             <label className="block text-sm font-medium">Short description<input value={form.shortDescription} maxLength={255} onChange={e => setForm({ ...form, shortDescription: e.target.value })} placeholder="Concise catalog summary" className="input mt-1 !py-2" /></label>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <label className="text-sm font-medium">Price<input value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} placeholder="0.00" type="number" min="0" step="0.01" className="input mt-1 !py-2" /></label>
               <label className="text-sm font-medium">Stock quantity<input value={form.stockQty} onChange={e => setForm({ ...form, stockQty: e.target.value })} placeholder="0" type="number" min="0" className="input mt-1 !py-2" /></label>
               <label className="text-sm font-medium">Weight (kg)<input value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} placeholder="Optional" type="number" min="0" step="0.01" className="input mt-1 !py-2" /></label>

@@ -51,8 +51,8 @@ export default function ProductCard({ product, variant = 'grid' }: Props) {
 
   if (variant === 'list') {
     return (
-      <Link to={`/product/${product.slug}`} className="card flex gap-4 hover:shadow-md transition-shadow group">
-        <div className="w-48 h-48 flex-shrink-0 bg-bg dark:bg-gray-700 rounded-lg border border-border flex items-center justify-center">
+      <Link to={`/product/${product.slug}`} className="card flex flex-col sm:flex-row gap-4 hover:shadow-md transition-shadow group">
+        <div className="w-full sm:w-32 h-48 sm:h-32 flex-shrink-0 bg-bg dark:bg-gray-700 rounded-lg border border-border flex items-center justify-center">
           <img src={product.images?.[0]?.url || '/placeholder/product-1.jpg'} alt={product.name} className="max-w-full max-h-full object-contain p-4" />
         </div>
         <div className="flex-1 py-2">

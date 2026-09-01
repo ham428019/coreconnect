@@ -47,8 +47,8 @@ export default function Navbar() {
               {menuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
             <Link to="/" className="flex items-center gap-2">
-              <img src="/cc-logo.png" alt="CoreConnect" className="h-20 w-20 object-contain" />
-              <span className="font-display text-xl font-extrabold tracking-tight text-primary dark:text-white">CoreConnect</span>
+              <img src="/cc-logo.png" alt="CoreConnect" className="h-10 w-10 sm:h-14 sm:w-14 object-contain" />
+              <span className="font-display text-xl font-extrabold tracking-tight text-primary dark:text-white hidden sm:block">CoreConnect</span>
             </Link>
           </div>
 

@@ -253,11 +253,11 @@ export default function ProductDetail() {
         <div className="mt-12">
           <h2 className="text-xl font-bold mb-4">Specifications</h2>
           <div className="card overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[400px]">
               <tbody>
                 {Object.entries(product.specs).map(([key, value]) => (
                   <tr key={key} className="border-b border-border last:border-0">
-                    <td className="py-3 pr-4 text-text-muted dark:text-gray-400 font-medium capitalize w-48">{key}</td>
+                    <td className="py-3 pr-4 text-text-muted dark:text-gray-400 font-medium capitalize w-48 whitespace-nowrap">{key}</td>
                     <td className="py-3 text-text dark:text-gray-200">{value}</td>
                   </tr>
                 ))}
