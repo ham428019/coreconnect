@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Tag, X, Copy, ChevronRight } from 'lucide-react';
+import { Tag, X, Copy } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
 import type { Coupon } from '../../types';
-
-const DISMISS_KEY = 'coupon-banner-dismissed';
 
 function formatOffer(coupon: Coupon): string {
   if (coupon.discountType === 'PERCENTAGE') {
@@ -35,11 +33,6 @@ export default function CouponBanner() {
   const coupons: Coupon[] = data?.data?.coupons || [];
 
   useEffect(() => {
-    const saved = localStorage.getItem(DISMISS_KEY);
-    if (saved) setDismissed(true);
-  }, []);
-
-  useEffect(() => {
     if (coupons.length <= 1) return;
     timerRef.current = setInterval(() => {
       setIndex(i => (i + 1) % coupons.length);
@@ -61,7 +54,6 @@ export default function CouponBanner() {
 
   const handleDismiss = () => {
     setDismissed(true);
-    try { localStorage.setItem(DISMISS_KEY, '1'); } catch {}
   };
 
   return (
