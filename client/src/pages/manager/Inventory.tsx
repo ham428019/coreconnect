@@ -71,8 +71,8 @@ export default function ManagerInventory() {
         </select>
       </div>
 
-      <div className="card">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto min-w-0">
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="border-b border-border text-text-muted">
               <th className="text-left py-3 font-medium">Product</th>
