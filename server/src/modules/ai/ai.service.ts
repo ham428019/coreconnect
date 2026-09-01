@@ -6,7 +6,16 @@ export type AIServiceResult =
   | { ok: true; content: string }
   | { ok: false; code: 'not_configured' | 'timeout' | 'provider_error' | 'invalid_response'; message: string; status?: number };
 
-export async function chatWithHF(systemPrompt: string, userMessage: string): Promise<AIServiceResult> {
+export interface HFOptions {
+  maxTokens?: number;
+  temperature?: number;
+}
+
+export async function chatWithHF(
+  systemPrompt: string,
+  userMessage: string,
+  options?: HFOptions,
+): Promise<AIServiceResult> {
   if (!env.HF_API_KEY) {
     return {
       ok: false,
@@ -34,8 +43,8 @@ export async function chatWithHF(systemPrompt: string, userMessage: string): Pro
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userMessage },
           ],
-          max_tokens: 300,
-          temperature: 0.1,
+          max_tokens: options?.maxTokens ?? 300,
+          temperature: options?.temperature ?? 0.1,
           top_p: 0.9,
         }),
         signal: controller.signal,

@@ -1012,27 +1012,40 @@ router.post('/summarize', async (req: Request, res: Response) => {
       return;
     }
 
-    const sourceFacts = [
-      `Name: ${product.name}`,
-      `Category: ${product.category?.name || 'Not listed'}`,
-      `Product type: ${product.productType || 'Not listed'}`,
-      `Brand: ${product.brand?.name || 'Not listed'}`,
-      `Price: $${product.price}`,
-      `Stock: ${product.stockQty}`,
-      `Warranty: ${product.warranty || 'Not listed'}`,
-      `Key features: ${(product.keyFeatures || []).join('; ') || 'Not listed'}`,
-      `Compatibility: ${(product.compatibility || []).join('; ') || 'Not listed'}`,
-      `Use cases: ${(product.useCases || []).join('; ') || 'Not listed'}`,
-      `Colors: ${(product.colors || []).join('; ') || 'Not listed'}`,
-      `Dimensions: ${product.dimensions || 'Not listed'}`,
-      `Weight: ${product.weight ?? 'Not listed'}`,
-      `Variants: ${product.variants.map(variant => variant.name).join('; ') || 'Not listed'}`,
-      `Specifications: ${Object.entries((product.specs || {}) as Record<string, unknown>).map(([key, value]) => `${key}=${value}`).join('; ') || 'Not listed'}`,
-      `Description: ${(product.description || '').slice(0, 1500)}`,
-    ].join('\n');
+    const specs = (product.specs || {}) as Record<string, unknown>;
+    const topSpecs = Object.entries(specs)
+      .slice(0, 6)
+      .map(([k, v]) => `${k}: ${v}`);
 
-    const systemPrompt = 'You are Core, a factual shopping assistant. Write only one or two concise sentences. Use only facts explicitly supplied in the catalog record. Do not infer, add, embellish, or guess any specification. Omit unavailable fields. Do not use markdown.';
-    const summaryResult = await chatWithHF(systemPrompt, `Summarize this exact catalog record for a shopper:\n${sourceFacts}`);
+    const sourceFacts: string[] = [
+      `Name: ${product.name}`,
+      `Type: ${product.productType || product.category?.name || 'Product'}`,
+      `Brand: ${product.brand?.name || 'Generic'}`,
+      product.description ? `Description: ${product.description}` : null,
+      (product.keyFeatures || []).length ? `Key features: ${product.keyFeatures.join('; ')}` : null,
+      topSpecs.length ? `Top specs: ${topSpecs.join('; ')}` : null,
+      (product.useCases || []).length ? `Use cases: ${product.useCases.join('; ')}` : null,
+      (product.compatibility || []).length ? `Compatibility: ${product.compatibility.join('; ')}` : null,
+      (product.variants || []).length ? `Available variants: ${product.variants.map(v => v.name).join(', ')}` : null,
+    ].filter(Boolean) as string[];
+
+    const systemPrompt = `You are Core, a friendly and knowledgeable shopping assistant.
+
+Your task: Write a short, natural product overview (2–4 sentences) that helps a shopper quickly understand what the product is, who it's for, and why they might want it.
+
+Guidelines:
+- Start by naming the product category or general use case (e.g., "This mechanical keyboard is designed for..." or "Built for gamers, this headset delivers...")
+- Connect key features or specs to real-world benefits when the data supports it
+- Mentioning a few top specs is fine, but DO NOT list every specification
+- Do NOT mention price, stock, SKU, warranty period, weight, dimensions, brand reputation, or review counts
+- Do NOT invent information not supported by the facts below
+- If the facts are sparse, write a simple, honest overview anyway
+- Write in plain, customer-friendly language — not marketing speak
+- Do NOT use markdown, bullet points, or numbered lists
+- Do NOT repeat the product name more than once`;
+
+    const summaryResult = await chatWithHF(systemPrompt, `Facts about this product:\n${sourceFacts.join('\n')}`, { maxTokens: 200, temperature: 0.4 });
+
     if (!summaryResult.ok) {
       apiResponse(res, {
         summary: buildCatalogSummary(product),
@@ -1042,12 +1055,15 @@ router.post('/summarize', async (req: Request, res: Response) => {
       return;
     }
 
-    // Reject a response if it introduces a number that is absent from the factual record.
-    const sourceNumbers = new Set(sourceFacts.match(/\d+(?:[.,]\d+)*/g) || []);
-    const unsupportedNumber = (summaryResult.content.match(/\d+(?:[.,]\d+)*/g) || [])
-      .find(number => !sourceNumbers.has(number));
-    if (unsupportedNumber) {
-      console.error(`[ai] Rejected ungrounded summary for ${slug}: unsupported numeric fact ${unsupportedNumber}.`);
+    const content = summaryResult.content;
+
+    // Reject clearly hallucinated content: if the response contains warranty/stock/price
+    // claims that are absent from the source facts.
+    const warrantyInResponse = /\b(\d[\d.]*\s*year)/i.test(content);
+    const stockClaim = /\b(in stock|out of stock|only \d+ left|\d+ units? remain)/i.test(content);
+    const priceClaim = /\$\d+/i.test(content);
+    if ((warrantyInResponse || stockClaim || priceClaim) && !sourceFacts.some(f => /\byear\b/i.test(f) || /\$/.test(f) || /stock/i.test(f))) {
+      console.error(`[ai] Rejected potentially hallucinated summary for ${slug}: ${content.slice(0, 80)}`);
       apiResponse(res, {
         summary: buildCatalogSummary(product),
         source: 'catalog',
@@ -1056,8 +1072,8 @@ router.post('/summarize', async (req: Request, res: Response) => {
       return;
     }
 
-    summaryCache.set(slug, { summary: summaryResult.content, at: Date.now() });
-    apiResponse(res, { summary: summaryResult.content, source: 'ai' });
+    summaryCache.set(slug, { summary: content, at: Date.now() });
+    apiResponse(res, { summary: content, source: 'ai' });
   } catch (error) {
     console.error('[ai] Product summary failed:', error);
     res.status(500).json({ success: false, message: 'The product summary could not be generated right now. Please try again.' });
