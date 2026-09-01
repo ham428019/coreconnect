@@ -220,19 +220,27 @@ export async function chatWithHF(
 
   const preferLargeModel = maxTokens >= 500;
   const orModel = options?.model ?? (preferLargeModel ? env.OPENROUTER_CHAT_MODEL : env.OPENROUTER_SUMMARIZE_MODEL);
-  const groqModel = options?.model ?? (preferLargeModel ? 'mixtral-8x7b-32768' : 'llama-3.1-8b-instant');
+  const groqModel = options?.model ?? 'llama-3.1-8b-instant';
   const hfModels = [env.HF_MODEL, env.HF_FALLBACK_MODEL].filter(Boolean);
 
-  const attempts: Array<() => Promise<AIServiceResult>> = [];
-  if (openrouterConfigured) attempts.push(() => openrouterChat(orModel, systemPrompt, userMessage, maxTokens, temperature));
-  if (groqConfigured) attempts.push(() => groqChat(groqModel, systemPrompt, userMessage, maxTokens, temperature));
-  if (hfConfigured && hfModels.length) attempts.push(() => hfChat(hfModels, systemPrompt, userMessage, maxTokens, temperature));
+  const attempts: Array<{ name: string; run: () => Promise<AIServiceResult> }> = [];
+  if (openrouterConfigured) attempts.push({ name: 'openrouter', run: () => openrouterChat(orModel, systemPrompt, userMessage, maxTokens, temperature) });
+  if (groqConfigured) attempts.push({ name: 'groq', run: () => groqChat(groqModel, systemPrompt, userMessage, maxTokens, temperature) });
+  if (hfConfigured && hfModels.length) attempts.push({ name: 'hf', run: () => hfChat(hfModels, systemPrompt, userMessage, maxTokens, temperature) });
 
   let lastError: AIServiceResult | null = null;
-  for (const attempt of attempts) {
-    const result = await attempt();
-    if (result.ok) return result;
+  for (const { name, run } of attempts) {
+    const result = await run();
+    if (result.ok) {
+      console.log(`[ai] Using ${name} for request`);
+      return result;
+    }
     lastError = result;
+    if (result.code === 'provider_error' && (result.status === 401 || result.status === 403 || result.status === 402)) {
+      console.error(`[ai] ${name} returned auth/payment error ${result.status}; stopping fallback chain`);
+      return result;
+    }
+    console.warn(`[ai] ${name} failed (${result.code}${result.status ? `, status ${result.status}` : ''}); trying next provider`);
   }
   return lastError ?? { ok: false, code: 'provider_error', message: 'The AI service is temporarily unavailable. Please try again.' };
 }
