@@ -152,6 +152,9 @@ export interface Address {
   zipCode: string;
   country: string;
   isDefault: boolean;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
 }
 
 export interface Coupon {

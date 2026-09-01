@@ -10,7 +10,7 @@ const router = Router();
 
 router.post('/', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { addressId, paymentMethod, couponCode } = req.body;
+    const { addressId, paymentMethod, couponCode, firstName, lastName, phone } = req.body;
 
     const address = await prisma.address.findFirst({
       where: { id: addressId, userId: req.user!.userId },
@@ -84,6 +84,9 @@ router.post('/', requireAuth, async (req: Request, res: Response, next: NextFunc
           state: address.state,
           zipCode: address.zipCode,
           country: address.country,
+          firstName: firstName || '',
+          lastName: lastName || '',
+          phone: phone || '',
         },
         items: {
           create: cartItems.map(item => ({
