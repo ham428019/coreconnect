@@ -27,4 +27,5 @@ export const env = {
   HF_API_KEY: process.env.HF_API_KEY || '',
   HF_MODEL: process.env.HF_MODEL || 'openai/gpt-oss-20b:groq',
   HF_FALLBACK_MODEL: process.env.HF_FALLBACK_MODEL || 'google/gemma-2-2b-it',
+  GROQ_API_KEY: process.env.GROQ_API_KEY || '',
 };

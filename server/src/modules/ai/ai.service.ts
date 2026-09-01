@@ -1,31 +1,84 @@
 import { env } from '../../config/env';
 
 const HF_API_URL = 'https://router.huggingface.co/v1/chat/completions';
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 export type AIServiceResult =
   | { ok: true; content: string }
   | { ok: false; code: 'not_configured' | 'timeout' | 'provider_error' | 'invalid_response'; message: string; status?: number };
 
 export interface HFOptions {
+  provider?: 'groq' | 'hf';
+  model?: string;
   maxTokens?: number;
   temperature?: number;
 }
 
-export async function chatWithHF(
+async function groqChat(
+  model: string,
   systemPrompt: string,
   userMessage: string,
-  options?: HFOptions,
+  maxTokens: number,
+  temperature: number,
 ): Promise<AIServiceResult> {
-  if (!env.HF_API_KEY) {
-    return {
-      ok: false,
-      code: 'not_configured',
-      message: 'The AI service is not configured. Please contact CoreConnect support.',
-    };
-  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(GROQ_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.GROQ_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+        max_tokens: maxTokens,
+        temperature,
+      }),
+      signal: controller.signal,
+    });
 
-  const models = [...new Set([env.HF_MODEL, env.HF_FALLBACK_MODEL].filter(Boolean))];
-  let lastError: AIServiceResult = { ok: false, code: 'provider_error', message: 'The AI service is temporarily unavailable. Please try again in a moment.' };
+    if (!res.ok) {
+      const body = await res.text().catch(() => '').then(t => t.slice(0, 500));
+      console.error(`[ai/groq] Groq request failed (${res.status}) for model ${model}: ${body}`);
+      if (res.status === 401 || res.status === 403) {
+        return { ok: false, code: 'provider_error', status: res.status, message: 'The AI service credentials are invalid. Please contact CoreConnect support.' };
+      }
+      if (res.status === 429) {
+        return { ok: false, code: 'provider_error', status: res.status, message: 'The AI service is busy right now. Please try again in a moment.' };
+      }
+      return { ok: false, code: 'provider_error', status: res.status, message: 'The AI service is temporarily unavailable. Please try again.' };
+    }
+
+    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const text = data.choices?.[0]?.message?.content;
+    const cleaned = text ? String(text).trim() : '';
+    if (cleaned) return { ok: true, content: cleaned };
+    return { ok: false, code: 'invalid_response', message: 'The AI service returned an empty response. Please try again.' };
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error(`[ai/groq] Groq request timed out for model ${model}.`);
+      return { ok: false, code: 'timeout', message: 'The AI service took too long to respond. Please try again.' };
+    }
+    console.error(`[ai/groq] Groq request failed for model ${model}:`, error);
+    return { ok: false, code: 'provider_error', message: 'The AI service is temporarily unavailable. Please try again.' };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function hfChat(
+  models: string[],
+  systemPrompt: string,
+  userMessage: string,
+  maxTokens: number,
+  temperature: number,
+): Promise<AIServiceResult> {
+  let lastError: AIServiceResult = { ok: false, code: 'provider_error', message: 'The AI service is temporarily unavailable. Please try again.' };
 
   for (const model of models) {
     const controller = new AbortController();
@@ -43,25 +96,24 @@ export async function chatWithHF(
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userMessage },
           ],
-          max_tokens: options?.maxTokens ?? 300,
-          temperature: options?.temperature ?? 0.1,
-          top_p: 0.9,
+          max_tokens: maxTokens,
+          temperature,
         }),
         signal: controller.signal,
       });
 
       if (!res.ok) {
-        const providerMessage = (await res.text()).slice(0, 500);
-        console.error(`[ai] Hugging Face request failed (${res.status}) for model ${model}: ${providerMessage}`);
-        const message = res.status === 401 || res.status === 403
-          ? 'The AI service credentials need attention. Please contact CoreConnect support.'
-          : res.status === 402
-            ? 'The AI provider has no available credits. A catalog-grounded summary is shown instead.'
-            : res.status === 429
-              ? 'The AI service is busy right now. A catalog-grounded summary is shown instead.'
-              : 'The AI service is temporarily unavailable. A catalog-grounded summary is shown instead.';
-        lastError = { ok: false, code: 'provider_error', status: res.status, message };
-        if (res.status === 401 || res.status === 403 || res.status === 402) break;
+        const body = await res.text().catch(() => '').then(t => t.slice(0, 500));
+        console.error(`[ai/hf] HuggingFace request failed (${res.status}) for model ${model}: ${body}`);
+        if (res.status === 401 || res.status === 403 || res.status === 402) {
+          lastError = { ok: false, code: 'provider_error', status: res.status, message: 'The AI service credentials need attention. Please contact CoreConnect support.' };
+          break;
+        }
+        if (res.status === 429) {
+          lastError = { ok: false, code: 'provider_error', status: res.status, message: 'The AI service is busy right now. Please try again.' };
+          continue;
+        }
+        lastError = { ok: false, code: 'provider_error', status: res.status, message: 'The AI service is temporarily unavailable. Please try again.' };
         continue;
       }
 
@@ -69,14 +121,14 @@ export async function chatWithHF(
       const text = data.choices?.[0]?.message?.content;
       const cleaned = text ? String(text).trim() : '';
       if (cleaned) return { ok: true, content: cleaned };
-      lastError = { ok: false, code: 'invalid_response', message: 'The AI service returned an empty response. A catalog-grounded summary is shown instead.' };
+      lastError = { ok: false, code: 'invalid_response', message: 'The AI service returned an empty response. Please try again.' };
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.error(`[ai] Hugging Face request timed out for model ${model}.`);
-        lastError = { ok: false, code: 'timeout', message: 'The AI service took too long to respond. A catalog-grounded summary is shown instead.' };
+        console.error(`[ai/hf] HuggingFace request timed out for model ${model}.`);
+        lastError = { ok: false, code: 'timeout', message: 'The AI service took too long to respond. Please try again.' };
       } else {
-        console.error(`[ai] Hugging Face request failed for model ${model}:`, error);
-        lastError = { ok: false, code: 'provider_error', message: 'The AI service is temporarily unavailable. A catalog-grounded summary is shown instead.' };
+        console.error(`[ai/hf] HuggingFace request failed for model ${model}:`, error);
+        lastError = { ok: false, code: 'provider_error', message: 'The AI service is temporarily unavailable. Please try again.' };
       }
     } finally {
       clearTimeout(timeout);
@@ -84,4 +136,47 @@ export async function chatWithHF(
   }
 
   return lastError;
+}
+
+export async function chatWithHF(
+  systemPrompt: string,
+  userMessage: string,
+  options?: HFOptions,
+): Promise<AIServiceResult> {
+  const provider = options?.provider ?? (env.GROQ_API_KEY ? 'groq' : 'hf');
+  const maxTokens = options?.maxTokens ?? 200;
+  const temperature = options?.temperature ?? 0.4;
+
+  const groqConfigured = Boolean(env.GROQ_API_KEY);
+  const hfConfigured = Boolean(env.HF_API_KEY);
+
+  if (!groqConfigured && !hfConfigured) {
+    return {
+      ok: false,
+      code: 'not_configured',
+      message: 'No AI provider is configured. Please contact CoreConnect support.',
+    };
+  }
+
+  if (provider === 'groq' && groqConfigured) {
+    const model = options?.model ?? (maxTokens <= 200 ? 'llama-3.1-8b-instant' : 'mixtral-8x7b-32768');
+    const result = await groqChat(model, systemPrompt, userMessage, maxTokens, temperature);
+    if (result.ok) return result;
+    if (hfConfigured) {
+      const hfModels = [env.HF_MODEL, env.HF_FALLBACK_MODEL].filter(Boolean);
+      return hfChat(hfModels, systemPrompt, userMessage, maxTokens, temperature);
+    }
+    return result;
+  }
+
+  if (provider === 'hf' && hfConfigured) {
+    const hfModels = [env.HF_MODEL, env.HF_FALLBACK_MODEL].filter(Boolean);
+    return hfChat(hfModels, systemPrompt, userMessage, maxTokens, temperature);
+  }
+
+  return {
+    ok: false,
+    code: 'not_configured',
+    message: 'No AI provider is configured. Please contact CoreConnect support.',
+  };
 }

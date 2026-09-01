@@ -973,7 +973,7 @@ router.post('/chat', optionalAuth, async (req: Request, res: Response) => {
     ? `Conversation so far:\n${historyLines}\n\nUser: ${msg}\n\nReal catalog data (use ONLY these products; do not invent others):\n${context.map(p => `- ${p.name} | brand: ${p.brand || 'n/a'} | $${p.price} | stock: ${p.stockQty} | rating: ${p.rating.toFixed(1)}/5 (${p.reviewCount} reviews) | tags: ${p.tags.join(', ')} | specs: ${Object.entries(p.specs).map(([k, v]) => `${k}=${v}`).join('; ')}`).join('\n')}`
     : `Conversation so far:\n${historyLines}\n\nUser: ${msg}\n\nNote: no matching products were found in the catalog. Be honest about this and do not invent products.`;
 
-  const llmReply = await chatWithHF(buildSystemPrompt(role), userPrompt);
+  const llmReply = await chatWithHF(buildSystemPrompt(role), userPrompt, { provider: 'groq', model: 'mixtral-8x7b-32768', maxTokens: 500, temperature: 0.4 });
   if (llmReply.ok) {
     respond(context.length > 0 ? { reply: llmReply.content, links: context.map(p => ({ label: p.name, slug: p.slug })) } : { reply: llmReply.content });
     return;
@@ -1044,7 +1044,7 @@ Guidelines:
 - Do NOT use markdown, bullet points, or numbered lists
 - Do NOT repeat the product name more than once`;
 
-    const summaryResult = await chatWithHF(systemPrompt, `Facts about this product:\n${sourceFacts.join('\n')}`, { maxTokens: 200, temperature: 0.4 });
+    const summaryResult = await chatWithHF(systemPrompt, `Facts about this product:\n${sourceFacts.join('\n')}`, { provider: 'groq', model: 'llama-3.1-8b-instant', maxTokens: 200, temperature: 0.4 });
 
     if (!summaryResult.ok) {
       apiResponse(res, {
