@@ -144,8 +144,8 @@ export async function chatWithHF(
   options?: HFOptions,
 ): Promise<AIServiceResult> {
   const provider = options?.provider ?? (env.GROQ_API_KEY ? 'groq' : 'hf');
-  const maxTokens = options?.maxTokens ?? 200;
-  const temperature = options?.temperature ?? 0.4;
+  const maxTokens = options?.maxTokens ?? 300;
+  const temperature = options?.temperature ?? 0.7;
 
   const groqConfigured = Boolean(env.GROQ_API_KEY);
   const hfConfigured = Boolean(env.HF_API_KEY);

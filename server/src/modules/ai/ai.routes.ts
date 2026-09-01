@@ -1044,7 +1044,7 @@ Guidelines:
 - Do NOT use markdown, bullet points, or numbered lists
 - Do NOT repeat the product name more than once`;
 
-    const summaryResult = await chatWithHF(systemPrompt, `Facts about this product:\n${sourceFacts.join('\n')}`, { provider: 'groq', model: 'llama-3.1-8b-instant', maxTokens: 200, temperature: 0.4 });
+    const summaryResult = await chatWithHF(systemPrompt, `Facts about this product:\n${sourceFacts.join('\n')}`, { provider: 'groq', model: 'llama-3.1-8b-instant', maxTokens: 300, temperature: 0.7 });
 
     if (!summaryResult.ok) {
       apiResponse(res, {
