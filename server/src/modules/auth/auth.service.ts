@@ -59,10 +59,10 @@ export async function register(data: {
 
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) throw new AppError(401, 'Invalid email or password');
+  if (!user) throw new AppError(401, 'No account found with this email. Please sign up or enter a valid email.');
 
   const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) throw new AppError(401, 'Invalid email or password');
+  if (!valid) throw new AppError(401, 'Incorrect password. Please try again.');
 
   if (!user.isActive) throw new AppError(403, 'Account is deactivated');
 
