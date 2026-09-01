@@ -4,6 +4,7 @@ import { Search, ShoppingCart, Heart, User, Menu, X, Moon, Sun, LogOut, Clipboar
 import { useAuthStore, useCartStore, useUIStore } from '../../stores';
 import { api } from '../../lib/api';
 import ConfirmDialog from '../ui/ConfirmDialog';
+import CouponBanner from './CouponBanner';
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -39,7 +40,9 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-bg-card dark:bg-gray-900 text-text dark:text-white sticky top-0 z-50 border-b-2 border-accent">
+    <>
+      <CouponBanner />
+      <nav className="bg-bg-card dark:bg-gray-900 text-text dark:text-white sticky top-0 z-50 border-b-2 border-accent">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
@@ -148,5 +151,6 @@ export default function Navbar() {
         onConfirm={handleLogout}
       />
     </nav>
+    </>
   );
 }

@@ -6,6 +6,35 @@ import { UserRole, DiscountType } from '@prisma/client';
 
 const router = Router();
 
+router.get('/active', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const now = new Date();
+    const coupons = await prisma.coupon.findMany({
+      where: {
+        isActive: true,
+        startsAt: { lte: now },
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: now } },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    const active = coupons.filter(c => !c.usageLimit || c.usageCount < c.usageLimit);
+    apiResponse(res, { coupons: active.map(c => ({
+      id: c.id,
+      code: c.code,
+      description: c.description,
+      discountType: c.discountType,
+      discountValue: Number(c.discountValue),
+      minOrderAmount: c.minOrderAmount ? Number(c.minOrderAmount) : null,
+      maxDiscount: c.maxDiscount ? Number(c.maxDiscount) : null,
+    })) });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/validate', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const code = String(req.query.code || '').trim().toUpperCase();
