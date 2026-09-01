@@ -28,4 +28,7 @@ export const env = {
   HF_MODEL: process.env.HF_MODEL || 'openai/gpt-oss-20b:groq',
   HF_FALLBACK_MODEL: process.env.HF_FALLBACK_MODEL || 'google/gemma-2-2b-it',
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
+  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY || '',
+  OPENROUTER_SUMMARIZE_MODEL: process.env.OPENROUTER_SUMMARIZE_MODEL || 'meta-llama/llama-3.1-8b-instruct:free',
+  OPENROUTER_CHAT_MODEL: process.env.OPENROUTER_CHAT_MODEL || 'mistralai/mistral-7b-instruct:free',
 };

@@ -1,11 +1,40 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Star, ShoppingCart, Heart, Minus, Plus, Shield, Truck, RotateCcw, Sparkles, Loader2, CheckCircle2, Info } from 'lucide-react';
+import { Star, ShoppingCart, Heart, Minus, Plus, Shield, Truck, RotateCcw, Sparkles, Loader2, CheckCircle2, Info, ThumbsUp, ThumbsDown, Target } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, formatCurrency, getStockStatus } from '../lib/api';
 import { useAuthStore } from '../stores';
 import type { Product, Review } from '../types';
 import { useState } from 'react';
+
+interface ParsedSummary {
+  summary: string;
+  bestFor: string;
+  pros: string[];
+  cons: string[];
+}
+
+function parseSummary(text: string): ParsedSummary {
+  const result: ParsedSummary = { summary: '', bestFor: '', pros: [], cons: [] };
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+  for (const line of lines) {
+    if (/^ai\s*summary\s*:?\s*/i.test(line)) {
+      result.summary = line.replace(/^ai\s*summary\s*:?\s*/i, '').trim();
+    } else if (/^best\s*for\s*:?\s*/i.test(line)) {
+      result.bestFor = line.replace(/^best\s*for\s*:?\s*/i, '').trim();
+    } else if (/^pros?\s*:?\s*/i.test(line)) {
+      const content = line.replace(/^pros?\s*:?\s*/i, '').trim();
+      if (content) result.pros = content.split('|').map(p => p.trim()).filter(Boolean);
+    } else if (/^cons?\s*:?\s*/i.test(line)) {
+      const content = line.replace(/^cons?\s*:?\s*/i, '').trim();
+      if (content) result.cons = content.split('|').map(p => p.trim()).filter(Boolean);
+    } else if (!result.summary) {
+      result.summary = line;
+    }
+  }
+  return result;
+}
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
@@ -280,12 +309,54 @@ export default function ProductDetail() {
           </button>
         </div>
         <div className="card">
-          {aiSummary && (
-            <div className="mb-4 p-3 rounded-lg bg-accent/10 border border-accent/30 text-sm">
-              <p className="font-semibold text-accent mb-1">{summarySource === 'catalog' ? 'Catalog Summary' : 'AI Summary'}</p>
-              <p className="text-text dark:text-gray-200 leading-relaxed">{aiSummary}</p>
-            </div>
-          )}
+          {aiSummary && (() => {
+            const parsed = parseSummary(aiSummary);
+            const hasStructured = parsed.summary || parsed.bestFor || parsed.pros.length || parsed.cons.length;
+            if (!hasStructured) {
+              return (
+                <div className="mb-4 p-3 rounded-lg bg-accent/10 border border-accent/30 text-sm">
+                  <p className="font-semibold text-accent mb-1">{summarySource === 'catalog' ? 'Catalog Summary' : 'AI Summary'}</p>
+                  <p className="text-text dark:text-gray-200 leading-relaxed whitespace-pre-wrap">{aiSummary}</p>
+                </div>
+              );
+            }
+            return (
+              <div className="mb-4 rounded-lg bg-accent/5 border border-accent/30 text-sm overflow-hidden">
+                <div className="p-3 bg-accent/10 border-b border-accent/20">
+                  <p className="font-semibold text-accent flex items-center gap-1.5"><Sparkles size={14} /> AI Summary</p>
+                </div>
+                <div className="p-3 space-y-3">
+                  {parsed.summary && (
+                    <p className="text-text dark:text-gray-200 leading-relaxed">{parsed.summary}</p>
+                  )}
+                  {parsed.bestFor && (
+                    <div className="flex items-start gap-2 pt-2 border-t border-accent/20">
+                      <Target size={15} className="text-accent mt-0.5 flex-shrink-0" />
+                      <p className="text-text dark:text-gray-200"><span className="font-semibold">Best for:</span> {parsed.bestFor}</p>
+                    </div>
+                  )}
+                  {parsed.pros.length > 0 && (
+                    <div className="flex items-start gap-2 pt-2 border-t border-accent/20">
+                      <ThumbsUp size={15} className="text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-text dark:text-gray-200">
+                        <p className="font-semibold">Pros:</p>
+                        <ul className="list-disc pl-5 mt-0.5 space-y-0.5">{parsed.pros.map((p, i) => <li key={i}>{p}</li>)}</ul>
+                      </div>
+                    </div>
+                  )}
+                  {parsed.cons.length > 0 && (
+                    <div className="flex items-start gap-2 pt-2 border-t border-accent/20">
+                      <ThumbsDown size={15} className="text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                      <div className="text-text dark:text-gray-200">
+                        <p className="font-semibold">Cons:</p>
+                        <ul className="list-disc pl-5 mt-0.5 space-y-0.5">{parsed.cons.map((c, i) => <li key={i}>{c}</li>)}</ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
           {summaryError && (
             <div role="alert" className="mb-4 flex items-start gap-2 rounded-lg border border-danger/25 bg-danger/5 p-3 text-sm text-danger">
               <Info size={17} className="mt-0.5 shrink-0" />

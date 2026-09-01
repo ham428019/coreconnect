@@ -973,7 +973,7 @@ router.post('/chat', optionalAuth, async (req: Request, res: Response) => {
     ? `Conversation so far:\n${historyLines}\n\nUser: ${msg}\n\nReal catalog data (use ONLY these products; do not invent others):\n${context.map(p => `- ${p.name} | brand: ${p.brand || 'n/a'} | $${p.price} | stock: ${p.stockQty} | rating: ${p.rating.toFixed(1)}/5 (${p.reviewCount} reviews) | tags: ${p.tags.join(', ')} | specs: ${Object.entries(p.specs).map(([k, v]) => `${k}=${v}`).join('; ')}`).join('\n')}`
     : `Conversation so far:\n${historyLines}\n\nUser: ${msg}\n\nNote: no matching products were found in the catalog. Be honest about this and do not invent products.`;
 
-  const llmReply = await chatWithHF(buildSystemPrompt(role), userPrompt, { provider: 'groq', model: 'mixtral-8x7b-32768', maxTokens: 500, temperature: 0.4 });
+  const llmReply = await chatWithHF(buildSystemPrompt(role), userPrompt, { provider: 'openrouter', maxTokens: 700, temperature: 0.7 });
   if (llmReply.ok) {
     respond(context.length > 0 ? { reply: llmReply.content, links: context.map(p => ({ label: p.name, slug: p.slug })) } : { reply: llmReply.content });
     return;
@@ -1031,20 +1031,26 @@ router.post('/summarize', async (req: Request, res: Response) => {
 
     const systemPrompt = `You are Core, a friendly and knowledgeable shopping assistant.
 
-Your task: Write a short, natural product overview (2–4 sentences) that helps a shopper quickly understand what the product is, who it's for, and why they might want it.
+Your task: Write a structured product overview that helps a shopper quickly understand what the product is, who it's for, and whether it's a good fit for them.
+
+Use EXACTLY this format with these four sections, each starting on its own line:
+
+AI Summary: <2-4 sentence paragraph describing the product, its category, target user, and overall positioning>
+Best for: <one sentence describing the ideal user or use case>
+Pros: <2-4 short bullet-style points separated by " | ">
+Cons: <1-3 short points describing limitations or trade-offs separated by " | ">
 
 Guidelines:
-- Start by naming the product category or general use case (e.g., "This mechanical keyboard is designed for..." or "Built for gamers, this headset delivers...")
-- Connect key features or specs to real-world benefits when the data supports it
-- Mentioning a few top specs is fine, but DO NOT list every specification
+- In "AI Summary", briefly explain what the product is and who it's designed for, then connect 2-3 key features or specs to real-world benefits
+- In "Pros", highlight strengths that are clearly supported by the facts (e.g., good specs, strong features, useful compatibility)
+- In "Cons", point out real limitations visible in the facts (e.g., modest RAM, small storage, basic features, no specific strengths mentioned). If the data is sparse or the product has no obvious weaknesses, write "None significant based on available information"
 - Do NOT mention price, stock, SKU, warranty period, weight, dimensions, brand reputation, or review counts
 - Do NOT invent information not supported by the facts below
-- If the facts are sparse, write a simple, honest overview anyway
+- If the facts are very sparse, write a simple, honest overview anyway
 - Write in plain, customer-friendly language — not marketing speak
-- Do NOT use markdown, bullet points, or numbered lists
-- Do NOT repeat the product name more than once`;
+- Do NOT repeat the product name more than once in the summary paragraph`;
 
-    const summaryResult = await chatWithHF(systemPrompt, `Facts about this product:\n${sourceFacts.join('\n')}`, { provider: 'groq', model: 'llama-3.1-8b-instant', maxTokens: 300, temperature: 0.7 });
+    const summaryResult = await chatWithHF(systemPrompt, `Facts about this product:\n${sourceFacts.join('\n')}`, { provider: 'openrouter', maxTokens: 500, temperature: 0.7 });
 
     if (!summaryResult.ok) {
       apiResponse(res, {
