@@ -39,7 +39,7 @@ async function request<T>(endpoint: string, options: RequestInit = {}, retried =
     ...options,
   });
 
-  if (res.status === 401 && !retried) {
+  if (res.status === 401 && !retried && !endpoint.startsWith('/auth/')) {
     const ok = await refreshSession();
     if (ok) return request<T>(endpoint, options, true);
     forceLogin();
