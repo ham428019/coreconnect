@@ -218,44 +218,21 @@ export async function chatWithHF(
     };
   }
 
-  const requestProvider = options?.provider;
-
-  if (requestProvider === 'openrouter' && openrouterConfigured) {
-    return openrouterChat(options!.model ?? env.OPENROUTER_SUMMARIZE_MODEL, systemPrompt, userMessage, maxTokens, temperature);
-  }
-  if (requestProvider === 'groq' && groqConfigured) {
-    return groqChat(options!.model ?? 'llama-3.1-8b-instant', systemPrompt, userMessage, maxTokens, temperature);
-  }
-  if (requestProvider === 'hf' && hfConfigured) {
-    const hfModels = [env.HF_MODEL, env.HF_FALLBACK_MODEL].filter(Boolean);
-    return hfChat(hfModels, systemPrompt, userMessage, maxTokens, temperature);
-  }
-
-  // Priority chain: OpenRouter → Groq → HF
-  if (openrouterConfigured) {
-    const result = await openrouterChat(options?.model ?? env.OPENROUTER_SUMMARIZE_MODEL, systemPrompt, userMessage, maxTokens, temperature);
-    if (result.ok) return result;
-    if (groqConfigured) {
-      const groqResult = await groqChat('llama-3.1-8b-instant', systemPrompt, userMessage, maxTokens, temperature);
-      if (groqResult.ok) return groqResult;
-    }
-    if (hfConfigured) {
-      const hfModels = [env.HF_MODEL, env.HF_FALLBACK_MODEL].filter(Boolean);
-      return hfChat(hfModels, systemPrompt, userMessage, maxTokens, temperature);
-    }
-    return result;
-  }
-
-  if (groqConfigured) {
-    const result = await groqChat(options?.model ?? 'llama-3.1-8b-instant', systemPrompt, userMessage, maxTokens, temperature);
-    if (result.ok) return result;
-    if (hfConfigured) {
-      const hfModels = [env.HF_MODEL, env.HF_FALLBACK_MODEL].filter(Boolean);
-      return hfChat(hfModels, systemPrompt, userMessage, maxTokens, temperature);
-    }
-    return result;
-  }
-
+  const preferLargeModel = maxTokens >= 500;
+  const orModel = options?.model ?? (preferLargeModel ? env.OPENROUTER_CHAT_MODEL : env.OPENROUTER_SUMMARIZE_MODEL);
+  const groqModel = options?.model ?? (preferLargeModel ? 'mixtral-8x7b-32768' : 'llama-3.1-8b-instant');
   const hfModels = [env.HF_MODEL, env.HF_FALLBACK_MODEL].filter(Boolean);
-  return hfChat(hfModels, systemPrompt, userMessage, maxTokens, temperature);
+
+  const attempts: Array<() => Promise<AIServiceResult>> = [];
+  if (openrouterConfigured) attempts.push(() => openrouterChat(orModel, systemPrompt, userMessage, maxTokens, temperature));
+  if (groqConfigured) attempts.push(() => groqChat(groqModel, systemPrompt, userMessage, maxTokens, temperature));
+  if (hfConfigured && hfModels.length) attempts.push(() => hfChat(hfModels, systemPrompt, userMessage, maxTokens, temperature));
+
+  let lastError: AIServiceResult | null = null;
+  for (const attempt of attempts) {
+    const result = await attempt();
+    if (result.ok) return result;
+    lastError = result;
+  }
+  return lastError ?? { ok: false, code: 'provider_error', message: 'The AI service is temporarily unavailable. Please try again.' };
 }

@@ -973,7 +973,7 @@ router.post('/chat', optionalAuth, async (req: Request, res: Response) => {
     ? `Conversation so far:\n${historyLines}\n\nUser: ${msg}\n\nReal catalog data (use ONLY these products; do not invent others):\n${context.map(p => `- ${p.name} | brand: ${p.brand || 'n/a'} | $${p.price} | stock: ${p.stockQty} | rating: ${p.rating.toFixed(1)}/5 (${p.reviewCount} reviews) | tags: ${p.tags.join(', ')} | specs: ${Object.entries(p.specs).map(([k, v]) => `${k}=${v}`).join('; ')}`).join('\n')}`
     : `Conversation so far:\n${historyLines}\n\nUser: ${msg}\n\nNote: no matching products were found in the catalog. Be honest about this and do not invent products.`;
 
-  const llmReply = await chatWithHF(buildSystemPrompt(role), userPrompt, { provider: 'openrouter', maxTokens: 700, temperature: 0.7 });
+  const llmReply = await chatWithHF(buildSystemPrompt(role), userPrompt, { maxTokens: 800, temperature: 0.7 });
   if (llmReply.ok) {
     respond(context.length > 0 ? { reply: llmReply.content, links: context.map(p => ({ label: p.name, slug: p.slug })) } : { reply: llmReply.content });
     return;
@@ -1050,7 +1050,7 @@ Guidelines:
 - Write in plain, customer-friendly language — not marketing speak
 - Do NOT repeat the product name more than once in the summary paragraph`;
 
-    const summaryResult = await chatWithHF(systemPrompt, `Facts about this product:\n${sourceFacts.join('\n')}`, { provider: 'openrouter', maxTokens: 500, temperature: 0.7 });
+    const summaryResult = await chatWithHF(systemPrompt, `Facts about this product:\n${sourceFacts.join('\n')}`, { maxTokens: 800, temperature: 0.7 });
 
     if (!summaryResult.ok) {
       apiResponse(res, {
