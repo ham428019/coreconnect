@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -88,6 +88,10 @@ export default function Checkout() {
     firstName: '', lastName: '', street: '', city: '', state: '', zipCode: '', country: 'US', phone: '', label: 'Home',
   });
 
+  const [billingForm, setBillingForm] = useState<ShippingFormData>({
+    firstName: '', lastName: '', street: '', city: '', state: '', zipCode: '', country: 'US', phone: '', label: 'Billing',
+  });
+
   const { data: cartData } = useQuery({
     queryKey: ['cart'],
     queryFn: () => api.get<{ items: CartItem[]; summary: any }>('/cart'),
@@ -97,6 +101,18 @@ export default function Checkout() {
     queryKey: ['addresses'],
     queryFn: () => api.get<{ addresses: Address[] }>('/users/me/addresses'),
   });
+
+  useEffect(() => {
+    if (!sameBillingAsShipping) {
+      setBillingForm({ ...shippingForm, label: 'Billing' });
+    }
+  }, [sameBillingAsShipping]);
+
+  useEffect(() => {
+    if (!sameBillingAsShipping) {
+      setBillingForm((prev) => ({ ...prev, ...shippingForm, label: 'Billing' }));
+    }
+  }, [shippingForm.firstName, shippingForm.lastName, shippingForm.street, shippingForm.city, shippingForm.state, shippingForm.zipCode, shippingForm.country, shippingForm.phone]);
 
   const placeOrder = useMutation({
     mutationFn: (data: any) => api.post('/orders', data),
@@ -379,6 +395,59 @@ export default function Checkout() {
                   <span className="text-sm font-medium">Use a different billing address</span>
                 </label>
               </div>
+
+              {!sameBillingAsShipping && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      value={billingForm.firstName}
+                      onChange={(e) => setBillingForm({ ...billingForm, firstName: e.target.value })}
+                      placeholder="First Name *"
+                      className="input !py-2 text-sm"
+                    />
+                    <input
+                      value={billingForm.lastName}
+                      onChange={(e) => setBillingForm({ ...billingForm, lastName: e.target.value })}
+                      placeholder="Last Name *"
+                      className="input !py-2 text-sm"
+                    />
+                  </div>
+                  <input
+                    value={billingForm.street}
+                    onChange={(e) => setBillingForm({ ...billingForm, street: e.target.value })}
+                    placeholder="Address *"
+                    className="input !py-2 text-sm"
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      value={billingForm.city}
+                      onChange={(e) => setBillingForm({ ...billingForm, city: e.target.value })}
+                      placeholder="City *"
+                      className="input !py-2 text-sm"
+                    />
+                    <input
+                      value={billingForm.state}
+                      onChange={(e) => setBillingForm({ ...billingForm, state: e.target.value })}
+                      placeholder="State / Region *"
+                      className="input !py-2 text-sm"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      value={billingForm.zipCode}
+                      onChange={(e) => setBillingForm({ ...billingForm, zipCode: e.target.value })}
+                      placeholder="Postal Code (Optional)"
+                      className="input !py-2 text-sm"
+                    />
+                    <input
+                      value={billingForm.phone}
+                      onChange={(e) => setBillingForm({ ...billingForm, phone: e.target.value })}
+                      placeholder="Phone *"
+                      className="input !py-2 text-sm"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="card">
@@ -494,9 +563,15 @@ export default function Checkout() {
                 <h3 className="font-semibold text-sm">Billing Address</h3>
                 <button onClick={() => setStep(1)} className="text-xs text-accent hover:underline">Edit</button>
               </div>
-              <p className="text-sm text-text-muted">
-                {sameBillingAsShipping ? 'Same as shipping address' : 'Different billing address'}
-              </p>
+              {sameBillingAsShipping ? (
+                <p className="text-sm text-text-muted">Same as shipping address</p>
+              ) : (
+                <div className="text-sm">
+                  <p className="font-medium">{billingForm.firstName} {billingForm.lastName}</p>
+                  <p className="text-text-muted">{billingForm.street}, {billingForm.city}, {billingForm.state} {billingForm.zipCode}</p>
+                  <p className="text-text-muted">{billingForm.phone}</p>
+                </div>
+              )}
             </div>
 
             <div className="card">
