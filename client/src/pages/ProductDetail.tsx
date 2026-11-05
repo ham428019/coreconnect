@@ -79,16 +79,15 @@ export default function ProductDetail() {
     setSummaryError(null);
     try {
       const res = await api.post<{ summary: string; source: 'ai' | 'catalog'; warning?: string }>('/ai/summarize', { slug: product.slug });
-      setAiSummary(res.data.summary);
-      setSummarySource(res.data.source);
-      if (res.data.warning) {
-        setSummaryError(res.data.warning);
-        toast.warning(res.data.warning);
+      const summary = res.data.summary?.trim();
+      if (!summary || /(?:AI service credentials|contact CoreConnect support|AI service is temporarily unavailable)/i.test(summary)) {
+        setSummaryError('Unable to generate a description. Please try again later.');
+        return;
       }
-    } catch (err: any) {
-      const message = err.message || 'AI summary is unavailable right now. Please try again later.';
-      setSummaryError(message);
-      toast.error(message);
+      setAiSummary(summary);
+      setSummarySource(res.data.source);
+    } catch {
+      setSummaryError('Unable to generate a description. Please try again later.');
     } finally {
       setSummaryLoading(false);
     }
