@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MessageCircle, X, Send, Sparkles, Smile } from 'lucide-react';
 import { useAuthStore } from '../../stores';
 
@@ -32,18 +32,13 @@ export default function AIWidget() {
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
   const isStaff = !!user && ['EMPLOYEE', 'MANAGER', 'ADMIN'].includes(user.role);
 
-  useEffect(() => {
-    setOpen(false);
-    setMessages([{ role: 'bot', text: greeting(), suggestions: defaultSuggestions }]);
-  }, [location.pathname]);
-
   const sendMessage = async (text: string) => {
+    if (loading || !text.trim()) return;
     setMessages((prev) => [...prev, { role: 'user', text }]);
     setLoading(true);
 
@@ -225,7 +220,7 @@ export default function AIWidget() {
               placeholder={isStaff ? "Ask Core about store data..." : "Ask Core anything..."}
               className="flex-1 px-3 py-2 border border-border dark:border-gray-600 rounded-btn text-sm bg-white dark:bg-gray-800 text-text dark:text-white focus:outline-none focus:ring-2 focus:ring-accent"
             />
-            <button type="submit" className="btn-primary !px-3 !py-2" disabled={!input.trim()}>
+            <button type="submit" className="btn-primary !px-3 !py-2" disabled={!input.trim() || loading}>
               <Send size={16} />
             </button>
           </form>

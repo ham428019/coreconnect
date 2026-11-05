@@ -236,10 +236,8 @@ export async function chatWithHF(
       return result;
     }
     lastError = result;
-    if (result.code === 'provider_error' && (result.status === 401 || result.status === 403 || result.status === 402)) {
-      console.error(`[ai] ${name} returned auth/payment error ${result.status}; stopping fallback chain`);
-      return result;
-    }
+    // One provider's credentials or billing must not disable other configured providers.
+    // Never log credentials; continue to the next provider on any provider-specific failure.
     console.warn(`[ai] ${name} failed (${result.code}${result.status ? `, status ${result.status}` : ''}); trying next provider`);
   }
   return lastError ?? { ok: false, code: 'provider_error', message: 'The AI service is temporarily unavailable. Please try again.' };

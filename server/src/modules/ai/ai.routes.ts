@@ -695,6 +695,20 @@ async function resolveCustomerIntent(message: string, ctx: ConversationContext, 
   const catalog = await loadCatalog();
   const brands = (await prisma.brand.findMany({ select: { name: true } })).map(b => b.name);
 
+  const tracking = /(track my order|track order|track my package|track shipment|where is my order|order status|order tracking|how (do|can) i track|my order)/.test(msg);
+  if (tracking) {
+    return user
+      ? {
+          reply: 'Go to My Orders and click Track Order on any active order. You will see a live timeline (Placed, Confirmed, Processing, Shipped, Delivered) plus the carrier and tracking number.',
+          action: { type: 'link', label: 'My Orders', path: '/orders' },
+        }
+      : {
+          reply: 'You can track orders after signing in. Log in, open My Orders, and click Track Order to see the live timeline and tracking number.',
+          action: { type: 'link', label: 'Login to track', path: '/login' },
+        };
+  }
+
+
   const catalogReply = resolveCatalogIntent(catalog, message, {
     lastProduct: ctx.lastProduct,
     lastProducts: ctx.lastProducts,
@@ -708,19 +722,6 @@ async function resolveCustomerIntent(message: string, ctx: ConversationContext, 
 
   const productQuestion = await resolveProductQuestion(catalog, msg, ctx);
   if (productQuestion) return productQuestion;
-
-  const tracking = /(track my order|track order|track my package|track shipment|where is my order|order status|order tracking|how (do|can) i track|my order)/.test(msg);
-  if (tracking) {
-    return user
-      ? {
-          reply: 'Go to My Orders and click Track Order on any active order. You will see a live timeline (Placed, Confirmed, Processing, Shipped, Delivered) plus the carrier and tracking number.',
-          action: { type: 'link', label: 'My Orders', path: '/orders' },
-        }
-      : {
-          reply: 'You can track orders after signing in. Log in, open My Orders, and click Track Order to see the live timeline and tracking number.',
-          action: { type: 'link', label: 'Login to track', path: '/login' },
-        };
-  }
 
   const howToOrder = /(how (do|can|to) (i )?order|how to (place|make) an order|how do i buy|place an order|how to buy)/.test(msg);
   if (howToOrder) {
@@ -915,6 +916,10 @@ function buildSystemPrompt(role?: UserRole): string {
 
 router.post('/chat', optionalAuth, async (req: Request, res: Response) => {
   const { message, sessionId } = req.body;
+  if (typeof message !== 'string' || message.length > 4000) {
+    res.status(400).json({ success: false, message: 'Message must be text under 4000 characters.' });
+    return;
+  }
   const role = req.user?.role;
 
   const key = typeof sessionId === 'string' && sessionId
@@ -967,7 +972,7 @@ router.post('/chat', optionalAuth, async (req: Request, res: Response) => {
     context = ctx.lastProducts.slice(0, 5);
   }
 
-  const historyLines = ctx.history.slice(-6).map(h => `${h.role === 'user' ? 'User' : 'Core'}: ${h.text}`).join('\n');
+  const historyLines = ctx.history.slice(-8, -1).map(h => `${h.role === 'user' ? 'User' : 'Core'}: ${h.text}`).join('\n');
 
   const userPrompt = context.length > 0
     ? `Conversation so far:\n${historyLines}\n\nUser: ${msg}\n\nReal catalog data (use ONLY these products; do not invent others):\n${context.map(p => `- ${p.name} | brand: ${p.brand || 'n/a'} | $${p.price} | stock: ${p.stockQty} | rating: ${p.rating.toFixed(1)}/5 (${p.reviewCount} reviews) | tags: ${p.tags.join(', ')} | specs: ${Object.entries(p.specs).map(([k, v]) => `${k}=${v}`).join('; ')}`).join('\n')}`
@@ -1033,10 +1038,10 @@ router.post('/summarize', async (req: Request, res: Response) => {
 
 Your task: Write a structured product overview that helps a shopper quickly understand what the product is, who it's for, and whether it's a good fit for them.
 
-Use EXACTLY this format with these four sections, each starting on its own line:
+Write 80–120 words total. Use EXACTLY this format with these four sections, each starting on its own line:
 
-AI Summary: <2-4 sentence paragraph describing the product, its category, target user, and overall positioning>
-Best for: <one sentence describing the ideal user or use case>
+AI Summary: <3-5 sentence paragraph describing the product, its category, target user, and overall positioning>
+Best for: <one concise sentence describing the ideal user or use case>
 Pros: <2-4 short bullet-style points separated by " | ">
 Cons: <1-3 short points describing limitations or trade-offs separated by " | ">
 
