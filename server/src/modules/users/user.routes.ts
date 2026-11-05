@@ -124,7 +124,7 @@ router.get('/admin/users', requireAuth, requireRole(UserRole.ADMIN), async (req:
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true, createdAt: true },
+        select: { id: true, email: true, firstName: true, lastName: true, role: true, managerPermissions: true, isActive: true, createdAt: true },
       }),
       prisma.user.count(),
     ]);
