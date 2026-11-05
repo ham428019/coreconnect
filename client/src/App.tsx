@@ -18,6 +18,7 @@ import OrderSuccess from './pages/OrderSuccess';
 import OrderHistory from './pages/OrderHistory';
 import OrderTracking from './pages/OrderTracking';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
 import About from './pages/About';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
@@ -183,6 +184,7 @@ export default function App() {
               <AIWidget />
             </div>
           } />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/login" element={
             <div className="flex flex-col min-h-screen">
               <Navbar />
