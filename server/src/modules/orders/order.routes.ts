@@ -182,8 +182,12 @@ router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       include: { items: { include: { product: { include: { images: true } } } }, payment: true },
     });
     if (!order) return apiError(res, 404, 'Order not found');
-    if (order.userId !== req.user!.userId && !['ADMIN', 'MANAGER', 'EMPLOYEE'].includes(req.user!.role)) {
-      return apiError(res, 403, 'Access denied');
+    if (order.userId !== req.user!.userId) {
+      if (req.user!.role === 'ADMIN') { /* permitted */ }
+      else if (req.user!.role === 'MANAGER') {
+        const manager = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { managerPermissions: true } });
+        if (!manager?.managerPermissions.includes('orders.view')) return apiError(res, 403, 'Access denied');
+      } else return apiError(res, 403, 'Access denied');
     }
     apiResponse(res, {
       order: {
