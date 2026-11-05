@@ -63,6 +63,8 @@ export default function Login() {
             {errors.password && <p className="text-danger text-xs mt-1">{errors.password.message}</p>}
           </div>
 
+          <div className="text-right"><Link to="/forgot-password" className="text-accent text-sm hover:underline">Forgot password?</Link></div>
+
           <button type="submit" disabled={loading} className="btn-primary w-full">
             <LogIn size={18} /> {loading ? 'Signing in...' : 'Sign In'}
           </button>

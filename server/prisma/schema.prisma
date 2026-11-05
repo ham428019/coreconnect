@@ -72,6 +72,7 @@ model User {
   reviews       Review[]
   wishlist      WishlistItem[]
   refreshTokens RefreshToken[]
+  passwordResetOtps PasswordResetOtp[]
 
   @@map("users")
 }
@@ -360,4 +361,18 @@ model ActivityLog {
   @@index([userId])
   @@index([action])
   @@map("activity_logs")
+}
+
+model PasswordResetOtp {
+  id String @id @default(uuid())
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash String
+  expiresAt DateTime
+  attempts Int @default(0)
+  lastSentAt DateTime @default(now())
+  verifiedAt DateTime?
+  resetTokenHash String?
+  createdAt DateTime @default(now())
+  @@map("password_reset_otps")
 }
