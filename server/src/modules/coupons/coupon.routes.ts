@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/database';
-import { requireAuth, requireRole } from '../../middleware/requireAuth';
+import { requireAuth, requireRole, requirePermission } from '../../middleware/requireAuth';
 import { apiResponse, apiError } from '../../utils/helpers';
 import { UserRole, DiscountType } from '@prisma/client';
 
@@ -59,7 +59,7 @@ router.get('/validate', async (req: Request, res: Response, next: NextFunction) 
   }
 });
 
-router.get('/', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
+router.get('/', requireAuth, requirePermission('coupons.manage'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const coupons = await prisma.coupon.findMany({ orderBy: { createdAt: 'desc' } });
     apiResponse(res, { coupons: coupons.map(c => ({ ...c, discountValue: Number(c.discountValue) })) });
@@ -68,7 +68,7 @@ router.get('/', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), asyn
   }
 });
 
-router.post('/', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', requireAuth, requirePermission('coupons.manage'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { code, discountType, discountValue, minOrderAmount, usageLimit } = req.body;
 
@@ -112,7 +112,7 @@ router.post('/', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), asy
   }
 });
 
-router.delete('/:id', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/:id', requireAuth, requirePermission('coupons.manage'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     await prisma.coupon.delete({ where: { id: req.params.id as string } });
     apiResponse(res, null, 'Coupon deleted');

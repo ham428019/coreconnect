@@ -1,12 +1,12 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/database';
-import { requireAuth, requireRole } from '../../middleware/requireAuth';
+import { requireAuth, requireRole, requirePermission } from '../../middleware/requireAuth';
 import { apiResponse } from '../../utils/helpers';
 import { UserRole } from '@prisma/client';
 
 const router = Router();
 
-router.get('/sales', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
+router.get('/sales', requireAuth, requirePermission('analytics.view'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const totalRevenue = await prisma.order.aggregate({
       _sum: { totalAmount: true },
@@ -44,7 +44,7 @@ router.get('/sales', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN),
   }
 });
 
-router.get('/top-products', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/top-products', requireAuth, requirePermission('analytics.view'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const products = await prisma.product.findMany({
       include: {
@@ -72,7 +72,7 @@ router.get('/top-products', requireAuth, requireRole(UserRole.MANAGER, UserRole.
   }
 });
 
-router.get('/overview', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/overview', requireAuth, requirePermission('analytics.view'), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const ordersByStatus = await Promise.all(
       ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'RETURNED', 'REFUNDED'].map(async status => ({

@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/database';
-import { requireAuth, requireRole } from '../../middleware/requireAuth';
+import { requireAuth, requireRole, MANAGER_PERMISSIONS } from '../../middleware/requireAuth';
 import { apiResponse, apiError, getPagination, buildMeta } from '../../utils/helpers';
 import { UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -124,7 +124,7 @@ router.get('/admin/users', requireAuth, requireRole(UserRole.ADMIN), async (req:
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        select: { id: true, email: true, firstName: true, lastName: true, role: true, isActive: true, createdAt: true },
+        select: { id: true, email: true, firstName: true, lastName: true, role: true, managerPermissions: true, isActive: true, createdAt: true },
       }),
       prisma.user.count(),
     ]);
@@ -137,9 +137,11 @@ router.get('/admin/users', requireAuth, requireRole(UserRole.ADMIN), async (req:
 router.patch('/admin/users/:id/role', requireAuth, requireRole(UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { role } = req.body;
+    if (!Object.values(UserRole).includes(role)) return apiError(res, 400, 'Invalid role');
+    if (req.params.id === req.user!.userId) return apiError(res, 400, 'Cannot change your own role');
     const user = await prisma.user.update({
       where: { id: req.params.id as string },
-      data: { role },
+      data: { role, managerPermissions: [] },
     });
     const { passwordHash: _, ...safe } = user;
     apiResponse(res, { user: safe }, 'Role updated');
@@ -150,6 +152,7 @@ router.patch('/admin/users/:id/role', requireAuth, requireRole(UserRole.ADMIN), 
 
 router.patch('/admin/users/:id/deactivate', requireAuth, requireRole(UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
   try {
+    if (req.params.id === req.user!.userId) return apiError(res, 400, 'Cannot deactivate your own account');
     const user = await prisma.user.update({
       where: { id: req.params.id as string },
       data: { isActive: false },
@@ -158,6 +161,18 @@ router.patch('/admin/users/:id/deactivate', requireAuth, requireRole(UserRole.AD
   } catch (error) {
     next(error);
   }
+});
+
+router.patch('/admin/users/:id/permissions', requireAuth, requireRole(UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const permissions = req.body?.permissions;
+    if (!Array.isArray(permissions) || !permissions.every((p: unknown) => typeof p === 'string' && (MANAGER_PERMISSIONS as readonly string[]).includes(p))) return apiError(res, 400, 'Invalid permissions');
+    const target = await prisma.user.findUnique({ where: { id: req.params.id as string } });
+    if (!target || target.role !== UserRole.MANAGER) return apiError(res, 400, 'Target must be a Manager');
+    const updated = await prisma.user.update({ where: { id: target.id }, data: { managerPermissions: [...new Set(permissions)] } });
+    await prisma.activityLog.create({ data: { userId: req.user!.userId, action: 'MANAGER_PERMISSIONS_UPDATED', entityType: 'User', entityId: target.id, details: { before: target.managerPermissions, after: updated.managerPermissions } } });
+    apiResponse(res, { permissions: updated.managerPermissions }, 'Manager permissions updated');
+  } catch (error) { next(error); }
 });
 
 export default router;

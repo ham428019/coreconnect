@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/database';
-import { requireAuth, requireRole } from '../../middleware/requireAuth';
+import { requireAuth, requireRole, requirePermission } from '../../middleware/requireAuth';
 import { apiResponse, apiError, getPagination, buildMeta } from '../../utils/helpers';
 import { UserRole, OrderStatus, PaymentStatus } from '@prisma/client';
 import { generateOrderNumber, generateInvoiceNumber } from '../../utils/generateIds';
@@ -182,8 +182,12 @@ router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
       include: { items: { include: { product: { include: { images: true } } } }, payment: true },
     });
     if (!order) return apiError(res, 404, 'Order not found');
-    if (order.userId !== req.user!.userId && !['ADMIN', 'MANAGER', 'EMPLOYEE'].includes(req.user!.role)) {
-      return apiError(res, 403, 'Access denied');
+    if (order.userId !== req.user!.userId) {
+      if (req.user!.role === 'ADMIN') { /* permitted */ }
+      else if (req.user!.role === 'MANAGER') {
+        const manager = await prisma.user.findUnique({ where: { id: req.user!.userId }, select: { managerPermissions: true } });
+        if (!manager?.managerPermissions.includes('orders.view')) return apiError(res, 403, 'Access denied');
+      } else return apiError(res, 403, 'Access denied');
     }
     apiResponse(res, {
       order: {
@@ -200,7 +204,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
   }
 });
 
-router.get('/admin/all', requireAuth, requireRole(UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
+router.get('/admin/all', requireAuth, requirePermission('orders.view'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { page, limit, skip } = getPagination(req.query);
     const { status } = req.query;
@@ -235,7 +239,7 @@ router.get('/admin/all', requireAuth, requireRole(UserRole.EMPLOYEE, UserRole.MA
   }
 });
 
-router.patch('/admin/:id/status', requireAuth, requireRole(UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/admin/:id/status', requireAuth, requirePermission('orders.update'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { status, trackingNumber, carrier } = req.body;
     const updateData: any = { status };

@@ -61,6 +61,7 @@ model User {
   phone         String?
   avatarUrl     String?
   role          UserRole  @default(CUSTOMER)
+  managerPermissions String[] @default([])
   isActive      Boolean   @default(true)
   emailVerified Boolean   @default(false)
   failedLoginAttempts Int @default(0)
