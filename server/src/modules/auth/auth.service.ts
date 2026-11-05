@@ -80,7 +80,7 @@ export async function login(email: string, password: string) {
       throw new AppError(423, 'Too many login attempts. Try again in 10 minutes or reset your password using Forgot Password.');
     }
     await prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: attempts } });
-    throw new AppError(401, `Invalid email or password. ${3 - attempts} attempt(s) remaining.`);
+    throw new AppError(401, `Invalid email or password`);
   }
 
   await prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, loginLockedUntil: null } });
