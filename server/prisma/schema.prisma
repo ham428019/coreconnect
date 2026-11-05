@@ -65,7 +65,6 @@ model User {
   emailVerified Boolean   @default(false)
   failedLoginAttempts Int @default(0)
   loginLockedUntil DateTime?
-  passwordResetRequired Boolean @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
