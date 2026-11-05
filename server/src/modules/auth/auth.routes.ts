@@ -99,7 +99,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response, next: NextFun
 });
 
 const emailSchema = z.object({ email: z.string().email() });
-const verifySchema = emailSchema.extend({ otp: z.string().regex(/^\\d{6}$/) });
+const verifySchema = emailSchema.extend({ otp: z.string().regex(/^\d{6}$/) });
 const resetSchema = emailSchema.extend({ resetToken: z.string().min(20), password: z.string().min(8).max(128) });
 
 router.post('/forgot-password', validateRequest(emailSchema), async (req, res, next) => {
