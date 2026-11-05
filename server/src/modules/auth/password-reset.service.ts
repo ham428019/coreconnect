@@ -13,6 +13,9 @@ const normalize = (email: string) => email.trim().toLowerCase();
 export async function sendOtp(email: string) {
   const user = await prisma.user.findUnique({ where: { email: normalize(email) } });
   if (!user || !user.isActive) return;
+  if (user.loginLockedUntil && user.loginLockedUntil.getTime() > Date.now()) {
+    throw new AppError(423, 'Password recovery is available after the 7-minute lock expires');
+  }
   const existing = await prisma.passwordResetOtp.findUnique({ where: { userId: user.id } });
   if (existing && Date.now() - existing.lastSentAt.getTime() < COOLDOWN) {
     throw new AppError(429, 'Please wait 60 seconds before requesting another code');
@@ -64,7 +67,7 @@ export async function resetPassword(email: string, token: string, password: stri
   if (!crypto.timingSafeEqual(provided, expected)) throw new AppError(400, 'Invalid or expired reset request');
   const passwordHash = await bcrypt.hash(password, 12);
   await prisma.$transaction([
-    prisma.user.update({ where: { id: user.id }, data: { passwordHash } }),
+    prisma.user.update({ where: { id: user.id }, data: { passwordHash, failedLoginAttempts: 0, loginLockedUntil: null, passwordResetRequired: false } }),
     prisma.refreshToken.deleteMany({ where: { userId: user.id } }),
     prisma.passwordResetOtp.delete({ where: { id: record.id } }),
   ]);
