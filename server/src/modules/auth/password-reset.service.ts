@@ -1,6 +1,5 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import nodemailer from 'nodemailer';
 import { prisma } from '../../config/database';
 import { env } from '../../config/env';
 import { AppError } from '../../middleware/errorHandler';
@@ -17,16 +16,32 @@ export async function sendOtp(email: string) {
   if (existing && Date.now() - existing.lastSentAt.getTime() < COOLDOWN) {
     throw new AppError(429, 'Please wait 60 seconds before requesting another code');
   }
-  if (!env.SMTP_USER || !env.SMTP_PASS) throw new AppError(503, 'Email service is not configured');
+  if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) throw new AppError(503, 'Email service is not configured');
   const otp = crypto.randomInt(0, 1000000).toString().padStart(6, '0');
-  const transporter = nodemailer.createTransport({
-    host: env.SMTP_HOST, port: env.SMTP_PORT, secure: env.SMTP_PORT === 465,
-    auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
-  });
-  await transporter.sendMail({
-    from: env.SMTP_USER, to: user.email, subject: 'CoreConnect password reset code',
-    text: `Your CoreConnect password reset code is ${otp}. It expires in 10 minutes. If you did not request this, ignore this email.`,
-  });
+  let response: Response;
+  try {
+    response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: env.RESEND_FROM_EMAIL,
+        to: [user.email],
+        subject: 'CoreConnect password reset code',
+        text: `Your CoreConnect password reset code is ${otp}. It expires in 10 minutes. If you did not request this, ignore this email.`,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+  } catch (error) {
+    console.error('Resend email request failed:', error instanceof Error ? error.name : 'unknown error');
+    throw new AppError(502, 'Unable to send reset email. Please try again later.');
+  }
+  if (!response.ok) {
+    console.error('Resend email rejected request:', response.status);
+    throw new AppError(502, 'Unable to send reset email. Please try again later.');
+  }
   await prisma.passwordResetOtp.upsert({
     where: { userId: user.id },
     create: { userId: user.id, codeHash: hash(otp), expiresAt: new Date(Date.now() + TEN_MINUTES) },
