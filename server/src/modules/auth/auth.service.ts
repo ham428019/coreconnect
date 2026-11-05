@@ -60,16 +60,12 @@ export async function register(data: {
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
   if (!user) throw new AppError(401, 'Invalid email or password');
-  if (!user.isActive) throw new AppError(403, 'Account is deactivated');
+  if (!user.isActive) throw new AppError(401, 'Invalid email or password');
 
   if (user.loginLockedUntil && user.loginLockedUntil.getTime() > Date.now()) {
     const remaining = Math.ceil((user.loginLockedUntil.getTime() - Date.now()) / 60000);
-    throw new AppError(423, `Too many incorrect passwords. Try password recovery after ${remaining} minute(s).`);
+    throw new AppError(423, `Too many login attempts. Try again in ${remaining} minute(s).`);
   }
-  if (user.passwordResetRequired) {
-    throw new AppError(403, 'Your account requires a password reset. Use Forgot Password to regain access.');
-  }
-
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
     const attempts = user.failedLoginAttempts + 1;
@@ -78,14 +74,13 @@ export async function login(email: string, password: string) {
         where: { id: user.id },
         data: {
           failedLoginAttempts: 3,
-          loginLockedUntil: new Date(Date.now() + 7 * 60 * 1000),
-          passwordResetRequired: true,
+          loginLockedUntil: new Date(Date.now() + 10 * 60 * 1000),
         },
       });
-      throw new AppError(423, 'Account locked for 7 minutes after 3 incorrect passwords. Reset your password using Forgot Password after the lock expires.');
+      throw new AppError(423, 'Too many login attempts. Try again in 10 minutes or reset your password using Forgot Password.');
     }
     await prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: attempts } });
-    throw new AppError(401, `Incorrect password. ${3 - attempts} attempt(s) remaining.`);
+    throw new AppError(401, `Invalid email or password. ${3 - attempts} attempt(s) remaining.`);
   }
 
   await prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, loginLockedUntil: null } });
