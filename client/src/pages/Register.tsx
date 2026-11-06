@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Mail, Lock, User, UserPlus } from 'lucide-react';
+import { Mail, Lock, User, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuthStore } from '../stores';
 
@@ -19,6 +19,7 @@ type FormData = z.infer<typeof schema>;
 
 export default function Register() {
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { setUser } = useAuthStore();
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({ resolver: zodResolver(schema) });
@@ -69,7 +70,10 @@ export default function Register() {
           <div>
             <div className="relative">
               <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-              <input {...register('password')} type="password" placeholder="Password (min 6 characters)" className="input !pl-10" />
+              <input {...register('password')} type={showPassword ? "text" : "password"} placeholder="Password (min 6 characters)" className="input !pl-10 !pr-12" />
+              <button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary" >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
             {errors.password && <p className="text-danger text-xs mt-1">{errors.password.message}</p>}
           </div>
