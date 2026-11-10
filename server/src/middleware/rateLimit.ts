@@ -38,3 +38,7 @@ export function rateLimit(options: { name: string; windowMs: number; max: number
 
 export const generalApiLimiter = rateLimit({ name: 'api', windowMs: 60_000, max: 100 });
 export const signupLimiter = rateLimit({ name: 'signup', windowMs: 60 * 60_000, max: 5 });
+
+export const chatbotLimiter = rateLimit({ name: 'ai-chat', windowMs: 60_000, max: 20 });
+export const productSearchLimiter = rateLimit({ name: 'product-search', windowMs: 60_000, max: 60 });
+export const imageUploadLimiter = rateLimit({ name: 'image-upload', windowMs: 15 * 60_000, max: 10 });
