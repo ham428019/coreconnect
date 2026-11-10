@@ -12,7 +12,7 @@ const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email(),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(12, 'Password must be at least 12 characters').max(72, 'Password must be at most 72 characters').refine(value => !['password123', 'password1234', 'password12345', '123456789012', 'qwerty123456', 'admin12345678', 'letmein123456', 'iloveyou12345'].includes(value.toLowerCase()), 'Choose a less common password'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -70,7 +70,7 @@ export default function Register() {
           <div>
             <div className="relative">
               <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-              <input {...register('password')} type={showPassword ? "text" : "password"} placeholder="Password (min 6 characters)" className="input !pl-10 !pr-12" />
+              <input {...register('password')} type={showPassword ? "text" : "password"} placeholder="Password (min 12 characters)" className="input !pl-10 !pr-12" />
               <button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary" >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>

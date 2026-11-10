@@ -8,6 +8,7 @@ import { Router } from 'express';
 import { signupLimiter } from '../../middleware/rateLimit';
 import { z } from 'zod';
 import * as reset from './password-reset.service';
+import { newPasswordSchema } from './password.schema';
 
 const router = Router();
 
@@ -101,7 +102,7 @@ router.get('/me', requireAuth, async (req: Request, res: Response, next: NextFun
 
 const emailSchema = z.object({ email: z.string().email() });
 const verifySchema = emailSchema.extend({ otp: z.string().regex(/^\d{6}$/) });
-const resetSchema = emailSchema.extend({ resetToken: z.string().min(20), password: z.string().min(8).max(128) });
+const resetSchema = emailSchema.extend({ resetToken: z.string().min(20), password: newPasswordSchema });
 
 router.post('/forgot-password', validateRequest(emailSchema), async (req, res, next) => {
   try { await reset.sendOtp(req.body.email); apiResponse(res, null, 'If the email is registered, a verification code will be sent.'); }
