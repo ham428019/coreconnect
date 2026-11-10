@@ -4,6 +4,7 @@ import { requireAuth, requireRole } from '../../middleware/requireAuth';
 import { apiResponse, apiError, getPagination, buildMeta } from '../../utils/helpers';
 import { UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { newPasswordSchema } from '../auth/password.schema';
 
 const router = Router();
 
@@ -44,7 +45,10 @@ router.patch('/me/password', requireAuth, async (req: Request, res: Response, ne
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!valid) return apiError(res, 400, 'Current password is incorrect');
 
-    const passwordHash = await bcrypt.hash(newPassword, 12);
+    const result = newPasswordSchema.safeParse(newPassword);
+    if (!result.success) return apiError(res, 400, result.error.issues[0]?.message || 'Invalid new password');
+
+    const passwordHash = await bcrypt.hash(result.data, 12);
     await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
     apiResponse(res, null, 'Password changed');
   } catch (error) {
