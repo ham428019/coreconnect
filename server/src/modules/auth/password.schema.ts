@@ -8,4 +8,8 @@ const commonPasswords = new Set([
 export const newPasswordSchema = z.string()
   .min(12, 'Password must be at least 12 characters')
   .max(72, 'Password must be at most 72 characters (bcrypt limit)')
+  .regex(/[A-Z]/, 'Include at least one uppercase letter')
+  .regex(/[a-z]/, 'Include at least one lowercase letter')
+  .regex(/[0-9]/, 'Include at least one number')
+  .regex(/[^A-Za-z0-9\s]/, 'Include at least one special symbol')
   .refine(value => !commonPasswords.has(value.toLowerCase()), 'Choose a less common password');
