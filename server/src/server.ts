@@ -1,4 +1,5 @@
 import express from 'express';
+import { issueCsrfToken, requireCsrf } from './middleware/csrf';
 import { generalApiLimiter } from './middleware/rateLimit';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -38,6 +39,8 @@ app.use(cookieParser());
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.use('/api/v1', generalApiLimiter);
+app.get('/api/v1/csrf-token', issueCsrfToken);
+app.use('/api/v1', requireCsrf);
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
