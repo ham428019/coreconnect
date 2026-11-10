@@ -25,7 +25,7 @@ export default function ForgotPassword() {
         setStep(2);
       } else {
         if (password.length < 12 || password.length > 72) throw new Error('Password must be 12–72 characters');
-        if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9\\s]/.test(password)) throw new Error('Include uppercase and lowercase letters, a number, and a special symbol');
+        if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9\s]/.test(password)) throw new Error('Include uppercase and lowercase letters, a number, and a special symbol');
         if (['password123', 'password1234', 'password12345', '123456789012', 'qwerty123456', 'admin12345678', 'letmein123456', 'iloveyou12345'].includes(password.toLowerCase())) throw new Error('Choose a less common password');
         await api.post('/auth/reset-password', { email, resetToken: token, password });
         toast.success('Password updated. You can sign in now.');
