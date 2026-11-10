@@ -25,6 +25,7 @@ export default function ForgotPassword() {
         setStep(2);
       } else {
         if (password.length < 12 || password.length > 72) throw new Error('Password must be 12–72 characters');
+        if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9\s]/.test(password)) throw new Error('Include uppercase and lowercase letters, a number, and a special symbol');
         if (['password123', 'password1234', 'password12345', '123456789012', 'qwerty123456', 'admin12345678', 'letmein123456', 'iloveyou12345'].includes(password.toLowerCase())) throw new Error('Choose a less common password');
         await api.post('/auth/reset-password', { email, resetToken: token, password });
         toast.success('Password updated. You can sign in now.');
@@ -45,7 +46,7 @@ export default function ForgotPassword() {
           <form onSubmit={submit} className="space-y-4">
             {step === 0 && <><p className="text-text-muted text-sm">Enter the email associated with your account to receive a 6-digit code.</p><input className="input" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Email address" autoComplete="email" /></>}
             {step === 1 && <><p className="text-text-muted text-sm">Enter the 6-digit code sent to {email}. The code expires in 10 minutes.</p><input className="input" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={otp} onChange={e => setOtp(e.target.value)} placeholder="6-digit OTP" /><button type="button" className="text-accent text-sm hover:underline" disabled={loading} onClick={async () => { setLoading(true); try { await api.post('/auth/forgot-password', { email }); toast.success('If eligible, a new code has been sent'); } catch (e: any) { toast.error(e.message); } finally { setLoading(false); } }}>Resend code</button></>}
-            {step === 2 && <><p className="text-text-muted text-sm">Choose a new password (at least 12 characters).</p><input className="input" type="password" autoComplete="new-password" minLength={12} maxLength={72} required value={password} onChange={e => setPassword(e.target.value)} placeholder="New password" /></>}
+            {step === 2 && <><p className="text-text-muted text-sm">Choose a new password (12–72 characters, with uppercase and lowercase letters, a number, and a special symbol).</p><input className="input" type="password" autoComplete="new-password" minLength={12} maxLength={72} required value={password} onChange={e => setPassword(e.target.value)} placeholder="New password" /></>}
             <button className="btn-primary w-full" disabled={loading} type="submit">{loading ? 'Please wait...' : step === 0 ? 'Send OTP' : step === 1 ? 'Verify OTP' : 'Reset password'}</button>
           </form>
         )}
