@@ -32,7 +32,7 @@ export default function Register() {
       toast.success('Account created! Welcome to CoreConnect.');
       navigate('/');
     } catch (err: any) {
-      toast.error(err.message);
+      toast.error(err.message === 'Validation error' ? 'Please check your details and choose a stronger password.' : (err.message || 'Unable to create account. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -70,12 +70,13 @@ export default function Register() {
           <div>
             <div className="relative">
               <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-              <input {...register('password')} type={showPassword ? "text" : "password"} placeholder="Password (min 12 characters)" className="input !pl-10 !pr-12" />
+              <input {...register('password')} type={showPassword ? "text" : "password"} placeholder="Create a strong password" className="input !pl-10 !pr-12" />
               <button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary" >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {errors.password && <p className="text-danger text-xs mt-1">{errors.password.message}</p>}
+            <p className="text-text-muted text-xs mt-1">Use 12–72 characters and avoid common or easily guessed passwords. Longer, unique passwords are more secure.</p>
+            {errors.password && <p role="alert" className="text-danger text-xs mt-1">{errors.password.message}</p>}
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary w-full">
