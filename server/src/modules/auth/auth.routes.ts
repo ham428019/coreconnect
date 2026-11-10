@@ -5,12 +5,13 @@ import { registerSchema, loginSchema } from './auth.schema';
 import { apiResponse, apiError } from '../../utils/helpers';
 import { requireAuth, optionalAuth } from '../../middleware/requireAuth';
 import { Router } from 'express';
+import { signupLimiter } from '../../middleware/rateLimit';
 import { z } from 'zod';
 import * as reset from './password-reset.service';
 
 const router = Router();
 
-router.post('/register', validateRequest(registerSchema), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/register', signupLimiter, validateRequest(registerSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await authService.register(req.body);
     res.cookie('accessToken', result.accessToken, {
