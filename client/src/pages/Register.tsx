@@ -12,7 +12,7 @@ const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email(),
-  password: z.string().min(12, 'Password must be at least 12 characters').max(72, 'Password must be at most 72 characters').regex(/[A-Z]/, 'Include at least one uppercase letter').regex(/[a-z]/, 'Include at least one lowercase letter').regex(/[0-9]/, 'Include at least one number').regex(/[^A-Za-z0-9\\s]/, 'Include at least one special symbol').refine(value => !['password123', 'password1234', 'password12345', '123456789012', 'qwerty123456', 'admin12345678', 'letmein123456', 'iloveyou12345'].includes(value.toLowerCase()), 'Choose a less common password'),
+  password: z.string().min(12, 'Password must be at least 12 characters').max(72, 'Password must be at most 72 characters').regex(/[A-Z]/, 'Include at least one uppercase letter').regex(/[a-z]/, 'Include at least one lowercase letter').regex(/[0-9]/, 'Include at least one number').regex(/[^A-Za-z0-9\s]/, 'Include at least one special symbol').refine(value => !['password123', 'password1234', 'password12345', '123456789012', 'qwerty123456', 'admin12345678', 'letmein123456', 'iloveyou12345'].includes(value.toLowerCase()), 'Choose a less common password'),
 });
 
 type FormData = z.infer<typeof schema>;
