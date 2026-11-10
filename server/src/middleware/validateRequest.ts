@@ -10,7 +10,7 @@ export function validateRequest(schema: ZodSchema) {
       if (error instanceof ZodError) {
         res.status(400).json({
           success: false,
-          message: 'Validation error',
+          message: error.errors[0]?.message || 'Please check the information you entered',
           errors: error.errors.map(e => ({
             path: e.path.join('.'),
             message: e.message,
