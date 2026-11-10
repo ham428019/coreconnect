@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import { productSearchLimiter } from '../../middleware/rateLimit';
 import { prisma } from '../../config/database';
 import { requireAuth, requireRole } from '../../middleware/requireAuth';
 import { apiResponse, apiError, getPagination, buildMeta } from '../../utils/helpers';
@@ -109,7 +110,7 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-router.get('/search', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/search', productSearchLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const q = req.query.q as string;
     if (!q) return apiError(res, 400, 'Search query required');
