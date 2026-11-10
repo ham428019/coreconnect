@@ -1,4 +1,5 @@
 import express from 'express';
+import { generalApiLimiter } from './middleware/rateLimit';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -22,6 +23,7 @@ import uploadRoutes from './modules/uploads/upload.routes';
 import { backfillStructuredProductData } from './modules/products/product-data.service';
 
 const app = express();
+app.set('trust proxy', 1);
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
@@ -34,6 +36,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
+app.use('/api/v1', generalApiLimiter);
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
