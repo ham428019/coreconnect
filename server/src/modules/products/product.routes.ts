@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../../config/database';
-import { requireAuth, requireRole } from '../../middleware/requireAuth';
+import { requireAuth, requireRole, requirePermission } from '../../middleware/requireAuth';
 import { apiResponse, apiError, getPagination, buildMeta } from '../../utils/helpers';
 import { UserRole } from '@prisma/client';
 import { generateSKU, slugify } from '../../utils/generateIds';
@@ -187,7 +187,7 @@ router.get('/:slug', async (req: Request, res: Response, next: NextFunction) => 
   }
 });
 
-router.post('/admin', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
+router.post('/admin', requireAuth, requirePermission('products.create'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { name, categoryId, brandId, images } = req.body;
 
@@ -223,7 +223,7 @@ router.post('/admin', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN)
   }
 });
 
-router.patch('/admin/:id/stock', requireAuth, requireRole(UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/admin/:id/stock', requireAuth, requirePermission('inventory.update', true), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { stockQty } = req.body;
     if (typeof stockQty !== 'number' || stockQty < 0) {
@@ -240,7 +240,7 @@ router.patch('/admin/:id/stock', requireAuth, requireRole(UserRole.EMPLOYEE, Use
   }
 });
 
-router.patch('/admin/:id', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/admin/:id', requireAuth, requirePermission('products.edit'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const data = productWriteData(req.body, true);
     if (req.body.name) {
@@ -257,7 +257,7 @@ router.patch('/admin/:id', requireAuth, requireRole(UserRole.MANAGER, UserRole.A
   }
 });
 
-router.delete('/admin/:id', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), async (req: Request, res: Response, next: NextFunction) => {
+router.delete('/admin/:id', requireAuth, requirePermission('products.delete'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     await prisma.product.delete({ where: { id: req.params.id as string } });
     apiResponse(res, null, 'Product deleted');
