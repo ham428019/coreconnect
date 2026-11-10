@@ -914,7 +914,7 @@ function buildSystemPrompt(role?: UserRole): string {
   return `${persona}\n\nStore facts:\n${facts}\n\nRespond as Core. Do not use markdown headings.`;
 }
 
-router.post('/chat', optionalAuth, async (req: Request, res: Response) => {
+router.post('/chat', chatbotLimiter, optionalAuth, async (req: Request, res: Response) => {
   const { message, sessionId } = req.body;
   if (typeof message !== 'string' || message.length > 4000) {
     res.status(400).json({ success: false, message: 'Message must be text under 4000 characters.' });
