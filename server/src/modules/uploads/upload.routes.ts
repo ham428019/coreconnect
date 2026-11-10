@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import { imageUploadLimiter } from '../../middleware/rateLimit';
 import multer from 'multer';
 import path from 'path';
 import crypto from 'crypto';
@@ -33,7 +34,7 @@ const upload = multer({
 
 const router = Router();
 
-router.post('/', requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), (req: Request, res: Response, next: NextFunction) => {
+router.post('/', imageUploadLimiter, requireAuth, requireRole(UserRole.MANAGER, UserRole.ADMIN), (req: Request, res: Response, next: NextFunction) => {
   upload.array('images', 5)(req, res, (err: any) => {
     if (err) return apiError(res, 400, err.message);
     const files = (req.files as Express.Multer.File[]) || [];
