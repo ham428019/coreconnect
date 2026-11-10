@@ -3,14 +3,32 @@ import type { ApiResponse } from '../types';
 const BASE_URL = '/api/v1';
 
 let refreshing: Promise<boolean> | null = null;
+let csrfTokenPromise: Promise<string> | null = null;
+
+async function getCsrfToken(): Promise<string> {
+  if (!csrfTokenPromise) {
+    csrfTokenPromise = fetch(`${BASE_URL}/csrf-token`, { credentials: 'include' })
+      .then(async response => {
+        if (!response.ok) throw new Error('Unable to initialize request security');
+        const result = await response.json();
+        return result.data.csrfToken as string;
+      })
+      .catch(error => {
+        csrfTokenPromise = null;
+        throw error;
+      });
+  }
+  return csrfTokenPromise;
+}
+
 
 async function refreshSession(): Promise<boolean> {
   if (!refreshing) {
-    refreshing = fetch(`${BASE_URL}/auth/refresh`, {
+    refreshing = getCsrfToken().then(csrfToken => fetch(`${BASE_URL}/auth/refresh`, {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-    })
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+    }))
       .then((r) => r.ok)
       .catch(() => false)
       .finally(() => {
@@ -30,11 +48,14 @@ function forceLogin() {
 }
 
 async function request<T>(endpoint: string, options: RequestInit = {}, retried = false): Promise<ApiResponse<T>> {
+  const method = (options.method || 'GET').toUpperCase();
+  const csrfToken = method === 'GET' || method === 'HEAD' ? null : await getCsrfToken();
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     credentials: 'include',
     headers: {
       ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...options.headers,
+      ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
     },
     ...options,
   });
